@@ -1,4 +1,6 @@
+
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 function App() {
   return (
@@ -8,6 +10,8 @@ function App() {
       <main>
         <h1>Welcome to ShopEZ</h1>
       </main>
+
+      <Footer />
     </>
   );
 }
