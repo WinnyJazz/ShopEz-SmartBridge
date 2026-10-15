@@ -7,6 +7,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import ShoppingCart from "./pages/ShoppingCart";
 
 function MainLayout({ children }) {
   return (
@@ -45,6 +46,15 @@ export default function App() {
           element={
             <MainLayout>
               <SignUp />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/cart"
+          element={
+            <MainLayout>
+              <ShoppingCart />
             </MainLayout>
           }
         />
