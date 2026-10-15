@@ -4,10 +4,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 
-// Layout untuk halaman yang menggunakan Navbar dan Footer
 function MainLayout({ children }) {
   return (
     <>
@@ -22,7 +22,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Pertahankan route Home dan Catalogue milikmu di sini */}
+        <Route
+          path="/"
+          element={
+            <MainLayout>
+              <Home />
+            </MainLayout>
+          }
+        />
 
         <Route
           path="/login"
@@ -41,7 +48,6 @@ export default function App() {
             </MainLayout>
           }
         />
-
       </Routes>
     </BrowserRouter>
   );
