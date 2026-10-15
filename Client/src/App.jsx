@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ShoppingCart from "./pages/ShoppingCart";
+import ProductDetails from "./pages/ProductDetails";
+import Catalogue from "./pages/Catalogue";
 
 function MainLayout({ children }) {
   return (
@@ -55,6 +57,24 @@ export default function App() {
           element={
             <MainLayout>
               <ShoppingCart />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/product/:id"
+          element={
+            <MainLayout>
+              <ProductDetails />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/catalogue"
+          element={
+            <MainLayout>
+              <Catalogue />
             </MainLayout>
           }
         />
