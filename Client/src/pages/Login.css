@@ -628,6 +628,12 @@
   }
 }
 
+.auth-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 @media (max-width: 760px) {
   .auth-page {
     padding: 16px;
@@ -728,3 +734,4 @@
     font-size: 10px;
   }
 }
+

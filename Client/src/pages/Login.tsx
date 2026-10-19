@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Mail,
   Lock,
@@ -15,15 +15,62 @@ import {
 import "./Login.css";
 
 export default function Login() {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event) {
+  
+async function handleSubmit(event) {
     event.preventDefault();
-    alert("Login UI siap! Hubungkan ke backend untuk login sungguhan.");
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed.");
+      }
+
+      // Simpan token dan data user
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Beri tahu Navbar bahwa login berhasil
+      window.dispatchEvent(new Event("authChanged"));
+
+      navigate("/");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
+
 
   return (
     <main className="auth-page">
@@ -97,6 +144,11 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
+              {error && (
+                <p className="auth-error" role="alert">
+                  {error}
+                </p>
+              )}
               <div className="auth-field">
                 <label htmlFor="login-email">Email address</label>
                 <div className="auth-input">
@@ -156,8 +208,13 @@ export default function Login() {
                 </button>
               </div>
 
-              <button type="submit" className="auth-primary-button">
-                Log In <ArrowRight size={17} />
+              <button
+                type="submit"
+                className="auth-primary-button"
+                disabled={loading}
+              >
+                {loading ? "Logging in..." : "Log In"}
+                {!loading && <ArrowRight size={17} />}
               </button>
             </form>
 
