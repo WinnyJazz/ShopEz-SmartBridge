@@ -24,32 +24,83 @@ export default function SignUp() {
     password: "",
     confirmPassword: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((previous) => ({ ...previous, [name]: value }));
   }
 
-  function handleSubmit(event) {
+  
+  async function handleSubmit(event) {
     event.preventDefault();
 
+    setError("");
+    setSuccess("");
+
     if (form.password.length < 8) {
-      alert("Password harus minimal 8 karakter.");
+      setError("Password harus minimal 8 karakter.");
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      alert("Password dan konfirmasi password tidak sama.");
+      setError("Password dan konfirmasi password tidak sama.");
       return;
     }
 
     if (!acceptedTerms) {
-      alert("Silakan setujui Terms & Conditions terlebih dahulu.");
+      setError("Silakan setujui Terms & Conditions terlebih dahulu.");
       return;
     }
 
-    alert("Form valid! Registrasi backend belum terhubung.");
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: form.name.trim(),
+            email: form.email.trim(),
+            password: form.password,
+            confirmPassword: form.confirmPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registrasi gagal.");
+      }
+
+      setSuccess("Akun berhasil dibuat! Silakan login.");
+
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+
+      setAcceptedTerms(false);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan. Silakan coba lagi."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
+
 
   return (
     <main className="auth-page">
@@ -123,6 +174,19 @@ export default function SignUp() {
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
+              {error && (
+                <p className="auth-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              {success && (
+                <p className="auth-success" role="status">
+                  {success}
+                  {" "}
+                  <Link to="/login">Log In</Link>
+                </p>
+              )}
               <div className="auth-field">
                 <label htmlFor="signup-name">Full name</label>
                 <div className="auth-input">
@@ -221,8 +285,13 @@ export default function SignUp() {
                 </span>
               </label>
 
-              <button type="submit" className="auth-primary-button">
-                Create account <ArrowRight size={17} />
+             <button
+                type="submit"
+                className="auth-primary-button"
+                disabled={loading}
+              >
+                {loading ? "Creating account..." : "Create account"}
+                {!loading && <ArrowRight size={17} />}
               </button>
             </form>
 

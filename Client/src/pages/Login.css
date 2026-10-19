@@ -634,6 +634,31 @@
   margin: 0;
 }
 
+
+.auth-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.auth-success {
+  color: #15803d;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.auth-success a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.auth-primary-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+
 @media (max-width: 760px) {
   .auth-page {
     padding: 16px;
