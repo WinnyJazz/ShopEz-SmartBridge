@@ -10,6 +10,7 @@ import SignUp from "./pages/SignUp";
 import ShoppingCart from "./pages/ShoppingCart";
 import ProductDetails from "./pages/ProductDetails";
 import Catalogue from "./pages/Catalogue";
+import Favorites from "./pages/Favorites";
 
 function MainLayout({ children }) {
   return (
@@ -77,6 +78,11 @@ export default function App() {
               <Catalogue />
             </MainLayout>
           }
+        />
+
+        <Route 
+          path="/favorites" 
+          element={<Favorites />} 
         />
       </Routes>
     </BrowserRouter>

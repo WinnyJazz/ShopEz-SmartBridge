@@ -62,9 +62,13 @@ function Navbar() {
 
       {/* Right Side */}
       <div className="navbar-actions">
-        <button className="nav-icon" aria-label="Favorites">
+        <Link
+          to="/favorites"
+          className="nav-icon"
+          aria-label="Favorites"
+        >
           <Heart size={22} strokeWidth={1.8} />
-        </button>
+        </Link>
 
         <Link
           to="/cart"
