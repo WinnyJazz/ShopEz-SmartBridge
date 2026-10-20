@@ -11,6 +11,7 @@ import ShoppingCart from "./pages/ShoppingCart";
 import ProductDetails from "./pages/ProductDetails";
 import Catalogue from "./pages/Catalogue";
 import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile";
 
 function MainLayout({ children }) {
   return (
@@ -82,7 +83,19 @@ export default function App() {
 
         <Route 
           path="/favorites" 
-          element={<Favorites />} 
+          element={
+            <MainLayout>
+               <Favorites />
+            </MainLayout>
+        } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <MainLayout>
+               <Profile />
+            </MainLayout>
+        } 
         />
       </Routes>
     </BrowserRouter>

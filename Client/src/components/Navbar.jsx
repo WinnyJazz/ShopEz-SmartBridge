@@ -1,11 +1,19 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Heart, ShoppingBag, User, LogOut } from "lucide-react";
+import {
+  Heart,
+  ShoppingBag,
+  User,
+  LogOut,
+  Settings,
+  ChevronRight,
+} from "lucide-react";
 import "./Navbar.css";
 
 function Navbar() {
   const navigate = useNavigate();
+
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem("user");
@@ -14,7 +22,8 @@ function Navbar() {
       return null;
     }
   });
-  const [profileOpen, setProfileOpen] = useState(false);
+
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     function updateUser() {
@@ -38,10 +47,10 @@ function Navbar() {
     localStorage.removeItem("user");
 
     setUser(null);
-    setProfileOpen(false);
-    navigate("/");
+    setIsProfileOpen(false);
 
     window.dispatchEvent(new Event("authChanged"));
+    navigate("/");
   }
 
   return (
@@ -84,28 +93,43 @@ function Navbar() {
               <button
                 className="sign-in"
                 type="button"
-                onClick={() => setProfileOpen(!profileOpen)}
-                aria-expanded={profileOpen}
+                onClick={() => setIsProfileOpen((open) => !open)}
+                aria-expanded={isProfileOpen}
               >
                 <User size={18} strokeWidth={1.8} />
                 <span>{user.name || "My Account"}</span>
               </button>
 
-              {profileOpen && (
+              {user && isProfileOpen && (
                 <div className="profile-dropdown">
-                  <p className="profile-name">
-                    {user.name}
-                  </p>
-                  <p className="profile-email">
-                    {user.email}
-                  </p>
+                  <div className="profile-dropdown-header">
+                    <strong>Hi, {user.name}!</strong>
+                    <span>{user.email}</span>
+                  </div>
+
+                  <Link
+                    to="/profile"
+                    className="profile-dropdown-item"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <User size={18} />
+                    <span>My Account</span>
+                  </Link>
+
+                  <Link
+                    to="/profile?tab=purchase"
+                    className="profile-dropdown-item"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <ShoppingBag size={18} />
+                    <span>My Purchase</span>
+                  </Link>
 
                   <button
-                    type="button"
-                    className="profile-logout"
+                    className="profile-dropdown-item logout-item"
                     onClick={handleLogout}
                   >
-                    <LogOut size={16} />
+                    <LogOut size={18} />
                     <span>Log Out</span>
                   </button>
                 </div>
