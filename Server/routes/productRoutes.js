@@ -7,8 +7,17 @@ const {
 } = require("../controllers/productController");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const sellerMiddleware = require("../middleware/sellerMiddleware");
 
+// Buyer maupun seller boleh melihat katalog
 router.get("/", getProducts);
-router.post("/", authMiddleware, createProduct);
+
+// Hanya seller yang boleh menambahkan produk
+router.post(
+  "/",
+  authMiddleware,
+  sellerMiddleware,
+  createProduct
+);
 
 module.exports = router;
