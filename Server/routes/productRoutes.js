@@ -3,21 +3,22 @@ const router = express.Router();
 
 const {
   getProducts,
+  getMyProducts,
   createProduct,
+  updateProduct,
+  deleteProduct,
 } = require("../controllers/productController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const sellerMiddleware = require("../middleware/sellerMiddleware");
 
-// Buyer maupun seller boleh melihat katalog
+// Katalog publik
 router.get("/", getProducts);
 
-// Hanya seller yang boleh menambahkan produk
-router.post(
-  "/",
-  authMiddleware,
-  sellerMiddleware,
-  createProduct
-);
+// Fitur khusus seller
+router.get("/mine", authMiddleware, sellerMiddleware, getMyProducts);
+router.post("/", authMiddleware, sellerMiddleware, createProduct);
+router.put("/:id", authMiddleware, sellerMiddleware, updateProduct);
+router.delete("/:id", authMiddleware, sellerMiddleware, deleteProduct);
 
 module.exports = router;
