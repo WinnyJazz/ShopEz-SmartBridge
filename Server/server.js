@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const shopRoutes = require("./routes/shopRoutes");
+const orderRoutes = require("./routes/orderRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +18,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/shop", shopRoutes);
+app.use("/api/orders", orderRoutes);
 app.get("/api/shop/test", (req, res) => {
   res.json({ success: true, message: "Shop route works!" });
 });
