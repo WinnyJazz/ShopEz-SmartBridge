@@ -22,6 +22,7 @@ app.get("/api/shop/test", (req, res) => {
 });
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json({ limit: "2mb" }));
+app.use("/api/favorites", require("./routes/favoriteRoutes"));
 
 // Test route
 app.get("/", (req, res) => {

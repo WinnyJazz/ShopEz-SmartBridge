@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
+const Favorite = require("../models/Favorite");
 
 // Field toko yang ikut dikirim bareng produk.
 // Jangan ambil shopImage karena isinya base64 dan bikin response berat.
@@ -327,6 +328,7 @@ const updateProduct = async (req, res) => {
 };
 
 // DELETE: hapus produk milik seller
+// DELETE: hapus produk milik seller
 const deleteProduct = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -343,6 +345,9 @@ const deleteProduct = async (req, res) => {
         message: "Product not found or you do not own this product.",
       });
     }
+
+    // Bersihkan favorit yang menunjuk ke produk ini
+    await Favorite.deleteMany({ product: req.params.id });
 
     return res.status(200).json({
       message: "Product deleted successfully.",

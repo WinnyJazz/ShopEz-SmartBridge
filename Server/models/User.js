@@ -1,7 +1,9 @@
+
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
+    // Informasi akun pengguna
     name: {
       type: String,
       required: true,
@@ -27,12 +29,14 @@ const userSchema = new mongoose.Schema(
       default: "buyer",
     },
 
-    // Foto profil (base64, maksimal sekitar 500 KB)
+    // Foto profil pengguna (URL Cloudinary)
     profileImage: {
       type: String,
       default: "",
+      trim: true,
     },
 
+    // Informasi toko
     shopName: {
       type: String,
       trim: true,
@@ -47,9 +51,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Foto toko (URL Cloudinary)
     shopImage: {
       type: String,
       default: "",
+      trim: true,
     },
 
     shopLocation: {
@@ -58,12 +64,13 @@ const userSchema = new mongoose.Schema(
       maxlength: 100,
       default: "",
     },
-  },
 
-      // Info pembayaran toko (diisi seller di My Shop)
+    // Informasi pembayaran toko
+    // QRIS dapat berupa URL Cloudinary
     shopQris: {
-      type: String, // gambar QRIS, base64
+      type: String,
       default: "",
+      trim: true,
     },
 
     shopBankName: {
@@ -86,6 +93,7 @@ const userSchema = new mongoose.Schema(
       maxlength: 100,
       default: "",
     },
+  },
   {
     timestamps: true,
   }
