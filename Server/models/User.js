@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -21,12 +22,20 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Foto profil pribadi untuk semua pengguna ShopEZ
+    profileImage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     role: {
       type: String,
       enum: ["buyer", "seller"],
       default: "buyer",
     },
 
+    // Informasi toko untuk pengguna dengan role seller
     shopName: {
       type: String,
       trim: true,
@@ -44,6 +53,7 @@ const userSchema = new mongoose.Schema(
     shopImage: {
       type: String,
       default: "",
+      trim: true,
     },
 
     shopLocation: {

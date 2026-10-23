@@ -1,9 +1,11 @@
+
 const User = require("../models/User");
 
+// GET: Ambil profil toko milik seller
 exports.getMyShopProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select(
-      "name email role shopName shopDescription shopImage shopLocation"
+      "name email role profileImage shopName shopDescription shopImage shopLocation"
     );
 
     if (!user) {
@@ -27,6 +29,7 @@ exports.getMyShopProfile = async (req, res) => {
         shopDescription: user.shopDescription || "",
         shopImage: user.shopImage || "",
         shopLocation: user.shopLocation || "",
+        profileImage: user.profileImage || "",
       },
     });
   } catch (error) {
@@ -39,15 +42,22 @@ exports.getMyShopProfile = async (req, res) => {
   }
 };
 
+// PUT: Update profil toko milik seller
 exports.updateMyShopProfile = async (req, res) => {
   try {
-    const { shopName, shopDescription, shopImage, shopLocation } = req.body;
+    const {
+      shopName,
+      shopDescription,
+      shopImage,
+      shopLocation,
+    } = req.body;
 
     if (
       typeof shopName !== "string" ||
       typeof shopDescription !== "string" ||
       typeof shopImage !== "string" ||
-      (shopLocation !== undefined && typeof shopLocation !== "string")
+      (shopLocation !== undefined &&
+        typeof shopLocation !== "string")
     ) {
       return res.status(400).json({
         success: false,
@@ -58,7 +68,8 @@ exports.updateMyShopProfile = async (req, res) => {
     const name = shopName.trim();
     const description = shopDescription.trim();
     const image = shopImage.trim();
-    const location = shopLocation === undefined ? undefined : shopLocation.trim();
+    const location =
+      shopLocation === undefined ? undefined : shopLocation.trim();
 
     if (!name || name.length > 100) {
       return res.status(400).json({
@@ -81,11 +92,14 @@ exports.updateMyShopProfile = async (req, res) => {
       });
     }
 
-    // Validate Base64 image, maximum approximately 500 KB.
+    // Validasi gambar Base64: JPG, PNG, atau WebP,
+    // dengan ukuran maksimal sekitar 500 KB.
     const validImage =
       !image ||
-      (/^data:image\/(jpeg|png|webp);base64,/.test(image) &&
-        image.length <= 700_000);
+      (
+        /^data:image\/(jpeg|png|webp);base64,/.test(image) &&
+        image.length <= 700_000
+      );
 
     if (!validImage) {
       return res.status(400).json({
@@ -115,7 +129,10 @@ exports.updateMyShopProfile = async (req, res) => {
     user.shopDescription = description;
     user.shopImage = image;
 
-    // Kalau client lama nggak ngirim lokasi, lokasi yang sudah ada dibiarkan
+    // Sinkronkan foto profil dengan foto toko seller.
+    user.profileImage = image;
+
+    // Pertahankan lokasi jika tidak dikirim oleh client.
     if (location !== undefined) {
       user.shopLocation = location;
     }
@@ -128,8 +145,9 @@ exports.updateMyShopProfile = async (req, res) => {
       shop: {
         shopName: user.shopName,
         shopDescription: user.shopDescription,
-        shopImage: user.shopImage,
+        shopImage: user.shopImage || "",
         shopLocation: user.shopLocation || "",
+        profileImage: user.profileImage || "",
       },
     });
   } catch (error) {
