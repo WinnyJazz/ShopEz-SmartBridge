@@ -55,6 +55,41 @@ const getMyProducts = async (req, res) => {
   }
 };
 
+const mongoose = require("mongoose");
+
+// PUBLIC: semua produk dari semua seller
+const getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({ products });
+  } catch (error) {
+    console.error("Get all products error:", error.message);
+    return res.status(500).json({ message: "Failed to load products." });
+  }
+};
+
+// PUBLIC: detail satu produk
+const getProductById = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    return res.status(200).json({ product });
+  } catch (error) {
+    console.error("Get product error:", error.message);
+    return res.status(500).json({ message: "Failed to load product." });
+  }
+};
+
+
 // POST: Menambahkan produk baru
 const createProduct = async (req, res) => {
   try {
@@ -331,4 +366,6 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getAllProducts,
+  getProductById,
 };
