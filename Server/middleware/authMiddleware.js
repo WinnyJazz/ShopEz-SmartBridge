@@ -7,6 +7,7 @@ const authMiddleware = (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Access denied. Token is required.",
+        code: "TOKEN_MISSING",
       });
     }
 
@@ -20,8 +21,16 @@ const authMiddleware = (req, res, next) => {
   } catch (error) {
     console.error("Auth middleware error:", error.message);
 
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        message: "Session expired. Please log in again.",
+        code: "TOKEN_EXPIRED",
+      });
+    }
+
     return res.status(401).json({
-      message: "Invalid or expired token.",
+      message: "Invalid token. Please log in again.",
+      code: "TOKEN_INVALID",
     });
   }
 };

@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
@@ -13,6 +12,7 @@ import Catalogue from "./pages/Catalogue";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import ViewMyShop from "./pages/seller/ViewMyShop";
+import AuthExpiryWatcher from "./components/AuthExpiryWatcher";
 
 function MainLayout({ children }) {
   return (
@@ -27,6 +27,8 @@ function MainLayout({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <AuthExpiryWatcher />
+
       <Routes>
         <Route
           path="/"
@@ -82,29 +84,31 @@ export default function App() {
           }
         />
 
-        <Route 
-          path="/favorites" 
+        <Route
+          path="/favorites"
           element={
             <MainLayout>
-               <Favorites />
+              <Favorites />
             </MainLayout>
-        } 
+          }
         />
-        <Route 
-          path="/profile" 
+
+        <Route
+          path="/profile"
           element={
             <MainLayout>
-               <Profile />
+              <Profile />
             </MainLayout>
-        } 
+          }
         />
-        <Route 
-          path="/seller/shop" 
+
+        <Route
+          path="/seller/shop"
           element={
             <MainLayout>
-               <ViewMyShop  />
+              <ViewMyShop />
             </MainLayout>
-        } 
+          }
         />
       </Routes>
     </BrowserRouter>

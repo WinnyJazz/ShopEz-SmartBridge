@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Mail,
   Lock,
@@ -16,6 +15,12 @@ import "./Login.css";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const sessionExpired = location.state?.expired === true;
+  const rawFrom = location.state?.from || "/";
+  const redirectTo =
+    rawFrom === "/login" || rawFrom === "/signup" ? "/" : rawFrom;
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -24,27 +29,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  
-async function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
       const data = await response.json();
 
@@ -56,15 +57,14 @@ async function handleSubmit(event) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Beri tahu Navbar bahwa login berhasil
+      // Beri tahu Navbar & AuthExpiryWatcher bahwa login berhasil
       window.dispatchEvent(new Event("authChanged"));
 
-      navigate("/");
+      // Balik ke halaman sebelum sesi habis
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong."
+        error instanceof Error ? error.message : "Something went wrong."
       );
     } finally {
       setLoading(false);
@@ -141,6 +141,11 @@ async function handleSubmit(event) {
               <span className="auth-form-kicker">WELCOME BACK</span>
               <h2>Log in to ShopEZ</h2>
               <p>Continue where you left off.</p>
+              {sessionExpired && (
+                <p className="auth-notice" role="status">
+                  Sesi kamu sudah habis. Silakan log in lagi.
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
