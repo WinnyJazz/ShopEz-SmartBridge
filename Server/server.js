@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
@@ -19,6 +20,7 @@ app.use("/api/shop", shopRoutes);
 app.get("/api/shop/test", (req, res) => {
   res.json({ success: true, message: "Shop route works!" });
 });
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
 // Test route
