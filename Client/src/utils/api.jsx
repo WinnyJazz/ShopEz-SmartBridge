@@ -55,3 +55,40 @@ export async function apiFetch(path, options = {}) {
 
   return response;
 }
+
+let interceptorInstalled = false;
+
+// Nangkep SEMUA fetch ke API_URL, jadi nggak perlu ganti fetch di tiap halaman
+export function setupFetchInterceptor() {
+  if (interceptorInstalled) return;
+  interceptorInstalled = true;
+
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+
+    try {
+      const input = args[0];
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+          ? input.href
+          : input?.url || "";
+
+      const isApiRequest = url.startsWith(API_URL);
+      const isAuthEndpoint =
+        url.includes("/api/auth/login") || url.includes("/api/auth/register");
+
+      // 401 dari endpoint protected + masih ada token = sesi habis
+      if (isApiRequest && !isAuthEndpoint && response.status === 401 && getToken()) {
+        handleSessionExpired();
+      }
+    } catch {
+      // jangan sampai interceptor bikin request asli gagal
+    }
+
+    return response;
+  };
+}
