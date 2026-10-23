@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { promoteIfApproved } = require("../utils/sellerPromotion");
 
 // SIGN UP
 const registerUser = async (req, res) => {
@@ -115,6 +116,9 @@ const loginUser = async (req, res) => {
       throw new Error("JWT_SECRET is not configured.");
     }
 
+    // Kalau aplikasi seller sudah di-approve lewat MongoDB, role ikut naik
+    await promoteIfApproved(user);
+
     const token = jwt.sign(
       {
         userId: user._id.toString(),
@@ -132,6 +136,7 @@ const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role || "buyer",
+        profileImage: user.profileImage || "",
       },
     });
   } catch (error) {
@@ -143,7 +148,64 @@ const loginUser = async (req, res) => {
   }
 };
 
+// SESSION
+// Sinkronkan role & foto profil dengan database. Token baru HANYA diberikan
+// kalau role berubah (misalnya baru di-approve jadi seller).
+const getSession = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Account not found. Please log in again.",
+      });
+    }
+
+    await promoteIfApproved(user);
+
+    const currentRole = user.role || "buyer";
+    const roleChanged = (req.user.role || "buyer") !== currentRole;
+
+    let token;
+
+    if (roleChanged) {
+      if (!process.env.JWT_SECRET) {
+        throw new Error("JWT_SECRET is not configured.");
+      }
+
+      token = jwt.sign(
+        {
+          userId: user._id.toString(),
+          role: currentRole,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+    }
+
+    return res.status(200).json({
+      token, // undefined kalau role nggak berubah
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: currentRole,
+        profileImage:
+          user.profileImage ||
+          (currentRole === "seller" ? user.shopImage || "" : ""),
+      },
+    });
+  } catch (error) {
+    console.error("Session error:", error.message);
+
+    return res.status(500).json({
+      message: "Failed to load session.",
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  getSession,
 };

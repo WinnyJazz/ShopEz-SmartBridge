@@ -159,3 +159,135 @@ exports.updateMyShopProfile = async (req, res) => {
     });
   }
 };
+
+// GET /api/shop/payment  (info pembayaran toko, khusus seller)
+exports.getMyPaymentSettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select(
+      "role shopQris shopBankName shopBankAccount shopBankHolder"
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    if (user.role !== "seller") {
+      return res.status(403).json({
+        success: false,
+        message: "Only sellers can manage payment settings.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      payment: {
+        qris: user.shopQris || "",
+        bankName: user.shopBankName || "",
+        bankAccount: user.shopBankAccount || "",
+        bankHolder: user.shopBankHolder || "",
+      },
+    });
+  } catch (error) {
+    console.error("Get payment settings error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load payment settings.",
+    });
+  }
+};
+
+// PUT /api/shop/payment
+exports.updateMyPaymentSettings = async (req, res) => {
+  try {
+    const { qris, bankName, bankAccount, bankHolder } = req.body;
+
+    if (
+      [qris, bankName, bankAccount, bankHolder].some(
+        (value) => typeof value !== "string"
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment settings.",
+      });
+    }
+
+    const qrisImage = qris.trim();
+    const name = bankName.trim();
+    const account = bankAccount.trim();
+    const holder = bankHolder.trim();
+
+    // Gambar QRIS: JPG/PNG/WebP, maksimal sekitar 1 MB
+    const validQris =
+      !qrisImage ||
+      (/^data:image\/(jpeg|png|webp);base64,/.test(qrisImage) &&
+        qrisImage.length <= 1_500_000);
+
+    if (!validQris) {
+      return res.status(400).json({
+        success: false,
+        message: "QRIS image must be JPG, PNG, or WebP and no larger than 1 MB.",
+      });
+    }
+
+    if (name.length > 50 || holder.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Bank name or account holder is too long.",
+      });
+    }
+
+    if (!/^[0-9\s-]{0,40}$/.test(account)) {
+      return res.status(400).json({
+        success: false,
+        message: "Account number can only contain digits, spaces, and dashes.",
+      });
+    }
+
+    // Rekening harus diisi lengkap atau dikosongkan semua
+    const bankFilled = [name, account, holder].filter(Boolean).length;
+    if (bankFilled !== 0 && bankFilled !== 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Fill in bank name, account number, and account holder together.",
+      });
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    if (user.role !== "seller") {
+      return res.status(403).json({
+        success: false,
+        message: "Only sellers can manage payment settings.",
+      });
+    }
+
+    user.shopQris = qrisImage;
+    user.shopBankName = name;
+    user.shopBankAccount = account;
+    user.shopBankHolder = holder;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Payment settings saved.",
+      payment: {
+        qris: user.shopQris,
+        bankName: user.shopBankName,
+        bankAccount: user.shopBankAccount,
+        bankHolder: user.shopBankHolder,
+      },
+    });
+  } catch (error) {
+    console.error("Update payment settings error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save payment settings.",
+    });
+  }
+};

@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -22,20 +21,18 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Foto profil pribadi untuk semua pengguna ShopEZ
-    profileImage: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     role: {
       type: String,
       enum: ["buyer", "seller"],
       default: "buyer",
     },
 
-    // Informasi toko untuk pengguna dengan role seller
+    // Foto profil (base64, maksimal sekitar 500 KB)
+    profileImage: {
+      type: String,
+      default: "",
+    },
+
     shopName: {
       type: String,
       trim: true,
@@ -53,7 +50,6 @@ const userSchema = new mongoose.Schema(
     shopImage: {
       type: String,
       default: "",
-      trim: true,
     },
 
     shopLocation: {
@@ -63,6 +59,33 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
   },
+
+      // Info pembayaran toko (diisi seller di My Shop)
+    shopQris: {
+      type: String, // gambar QRIS, base64
+      default: "",
+    },
+
+    shopBankName: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+      default: "",
+    },
+
+    shopBankAccount: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "",
+    },
+
+    shopBankHolder: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
   {
     timestamps: true,
   }

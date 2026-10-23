@@ -1,4 +1,3 @@
-
 const User = require("../models/User");
 
 // PUT /api/auth/profile-image
@@ -39,7 +38,6 @@ exports.updateMyProfileImage = async (req, res) => {
       });
     }
 
-    // Simpan foto profil untuk semua user.
     user.profileImage = image;
 
     // Untuk seller, foto profil juga menjadi foto toko.
@@ -53,15 +51,12 @@ exports.updateMyProfileImage = async (req, res) => {
       success: true,
       message: "Profile photo updated successfully.",
       user: {
-        _id: user._id,
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         profileImage: user.profileImage || "",
-        shopImage:
-          user.role === "seller"
-            ? user.shopImage || ""
-            : undefined,
+        ...(user.role === "seller" && { shopImage: user.shopImage || "" }),
       },
     });
   } catch (error) {

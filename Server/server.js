@@ -21,7 +21,7 @@ app.get("/api/shop/test", (req, res) => {
   res.json({ success: true, message: "Shop route works!" });
 });
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
+app.use(express.json({ limit: "2mb" }));
 
 // Test route
 app.get("/", (req, res) => {
