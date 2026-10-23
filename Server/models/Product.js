@@ -27,7 +27,7 @@ const productSchema = new mongoose.Schema(
 
     price: {
       type: Number,
-      required: [true, "Product price is required"],
+      required: [true, "Price cannot be negative"],
       min: [0, "Price cannot be negative"],
     },
 
@@ -45,7 +45,16 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Stok yang tersedia
+    // Semua gambar produk, maksimal 8
+    images: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (images) => images.length <= 8,
+        message: "A product can have a maximum of 8 images",
+      },
+    },
+
     stock: {
       type: Number,
       required: true,
@@ -57,13 +66,11 @@ const productSchema = new mongoose.Schema(
       },
     },
 
-    // Status produk
     isActive: {
       type: Boolean,
       default: true,
     },
 
-    // Informasi rating
     rating: {
       type: Number,
       default: 0,
@@ -77,7 +84,6 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Informasi diskon (opsional)
     discountPercentage: {
       type: Number,
       default: 0,

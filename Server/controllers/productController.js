@@ -1,11 +1,24 @@
+const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 
-// GET: Menampilkan semua produk aktif untuk katalog buyer
+// Field toko yang ikut dikirim bareng produk.
+// Jangan ambil shopImage karena isinya base64 dan bikin response berat.
+const SELLER_FIELDS = "name shopName shopLocation";
+
+const MAX_IMAGES = 8;
+
+// File hasil upload multer -> path yang disimpan di DB
+const toImagePaths = (files = []) =>
+  files.map((file) => `/uploads/${file.filename}`);
+
+// GET: katalog publik (semua produk aktif dari semua seller)
 const getProducts = async (req, res) => {
   try {
     const { search, category } = req.query;
 
-    const filter = { isActive: true };
+    const filter = { isActive: { $ne: false } };
 
     if (search) {
       filter.$or = [
@@ -15,70 +28,60 @@ const getProducts = async (req, res) => {
     }
 
     if (category) {
-      filter.category = category;
+      filter.category = { $regex: `^${category}$`, $options: "i" };
     }
 
     const products = await Product.find(filter)
-      .populate("seller", "name")
+      .populate("seller", SELLER_FIELDS)
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: products.length,
       products,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch products",
-      error: error.message,
-    });
+    console.error("Get products error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch products." });
   }
 };
 
-// GET: Menampilkan produk milik seller yang login
+// Alias, supaya route lama yang pakai getAllProducts tetap jalan
+const getAllProducts = getProducts;
+
+// GET: produk milik seller yang login
 const getMyProducts = async (req, res) => {
   try {
     const products = await Product.find({
       seller: req.user.userId,
     }).sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: products.length,
       products,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch your products",
-      error: error.message,
-    });
+    console.error("Get my products error:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch your products." });
   }
 };
 
-const mongoose = require("mongoose");
-
-// PUBLIC: semua produk dari semua seller
-const getAllProducts = async (req, res) => {
-  try {
-    const products = await Product.find().sort({ createdAt: -1 });
-
-    return res.status(200).json({ products });
-  } catch (error) {
-    console.error("Get all products error:", error.message);
-    return res.status(500).json({ message: "Failed to load products." });
-  }
-};
-
-// PUBLIC: detail satu produk
+// GET: detail satu produk (publik)
 const getProductById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).json({ message: "Product not found." });
     }
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate(
+      "seller",
+      SELLER_FIELDS
+    );
 
-    if (!product) {
+    if (!product || product.isActive === false) {
       return res.status(404).json({ message: "Product not found." });
     }
 
@@ -89,251 +92,247 @@ const getProductById = async (req, res) => {
   }
 };
 
-
-// POST: Menambahkan produk baru
+// POST: tambah produk (multipart/form-data, field gambar = "images")
 const createProduct = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      price,
-      category,
-      image,
-      stock,
-      discountPercentage,
-    } = req.body;
+    const name = (req.body.name || "").trim();
+    const description = (req.body.description || "").trim();
+    const category = (req.body.category || "").trim();
+    const price = Number(req.body.price);
+    const stock = Number(req.body.stock);
+    const discountPercentage = Number(req.body.discountPercentage || 0);
 
-    if (
-      !name?.trim() ||
-      !description?.trim() ||
-      price === undefined ||
-      !category?.trim() ||
-      !image?.trim() ||
-      stock === undefined
-    ) {
+    if (!name || !description || !category) {
       return res.status(400).json({
-        message: "Please fill in all required product fields",
+        message: "Please fill in all required product fields.",
+      });
+    }
+
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({
+        message: "Price must be a valid non-negative number.",
+      });
+    }
+
+    if (!Number.isInteger(stock) || stock < 0) {
+      return res.status(400).json({
+        message: "Stock must be a non-negative whole number.",
       });
     }
 
     if (
-      typeof price !== "number" ||
-      !Number.isFinite(price) ||
-      price < 0
+      !Number.isFinite(discountPercentage) ||
+      discountPercentage < 0 ||
+      discountPercentage > 100
     ) {
       return res.status(400).json({
-        message: "Price must be a valid non-negative number",
+        message: "Discount must be between 0 and 100.",
       });
     }
 
-    if (
-      typeof stock !== "number" ||
-      !Number.isInteger(stock) ||
-      stock < 0
-    ) {
-      return res.status(400).json({
-        message: "Stock must be a non-negative whole number",
-      });
-    }
+    const images = toImagePaths(req.files);
 
-    if (
-      discountPercentage !== undefined &&
-      (
-        typeof discountPercentage !== "number" ||
-        !Number.isFinite(discountPercentage) ||
-        discountPercentage < 0 ||
-        discountPercentage > 100
-      )
-    ) {
+    if (images.length === 0) {
       return res.status(400).json({
-        message: "Discount must be between 0 and 100",
+        message: "Please upload at least one product image.",
       });
     }
 
     const product = await Product.create({
       seller: req.user.userId,
-      name: name.trim(),
-      description: description.trim(),
+      name,
+      description,
       price,
-      category: category.trim(),
-      image: image.trim(),
+      category,
       stock,
-      discountPercentage: discountPercentage ?? 0,
+      discountPercentage,
+      images,
+      image: images[0], // gambar utama, buat kompatibilitas data lama
     });
 
-    res.status(201).json({
-      message: "Product created successfully",
+    return res.status(201).json({
+      message: "Product created successfully.",
       product,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to create product",
-      error: error.message,
-    });
+    console.error("Create product error:", error.message);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Failed to create product." });
   }
 };
 
-// PUT: Mengedit produk milik seller
+// PUT: edit produk milik seller (hapus gambar lama + tambah gambar baru)
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const allowedFields = [
-      "name",
-      "description",
-      "price",
-      "category",
-      "image",
-      "stock",
-      "discountPercentage",
-      "isActive",
-    ];
 
-    const updates = {};
-
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        message: "No product fields provided to update",
-      });
-    }
-
-    if (
-      updates.name !== undefined &&
-      (typeof updates.name !== "string" || !updates.name.trim())
-    ) {
-      return res.status(400).json({
-        message: "Product name cannot be empty",
-      });
-    }
-
-    if (
-      updates.description !== undefined &&
-      (typeof updates.description !== "string" ||
-        !updates.description.trim())
-    ) {
-      return res.status(400).json({
-        message: "Description cannot be empty",
-      });
-    }
-
-    if (
-      updates.category !== undefined &&
-      (typeof updates.category !== "string" ||
-        !updates.category.trim())
-    ) {
-      return res.status(400).json({
-        message: "Category cannot be empty",
-      });
-    }
-
-    if (
-      updates.image !== undefined &&
-      (typeof updates.image !== "string" || !updates.image.trim())
-    ) {
-      return res.status(400).json({
-        message: "Image URL cannot be empty",
-      });
-    }
-
-    if (
-      updates.price !== undefined &&
-      (
-        typeof updates.price !== "number" ||
-        !Number.isFinite(updates.price) ||
-        updates.price < 0
-      )
-    ) {
-      return res.status(400).json({
-        message: "Price must be a valid non-negative number",
-      });
-    }
-
-    if (
-      updates.stock !== undefined &&
-      (
-        typeof updates.stock !== "number" ||
-        !Number.isInteger(updates.stock) ||
-        updates.stock < 0
-      )
-    ) {
-      return res.status(400).json({
-        message: "Stock must be a non-negative whole number",
-      });
-    }
-
-    if (
-      updates.discountPercentage !== undefined &&
-      (
-        typeof updates.discountPercentage !== "number" ||
-        !Number.isFinite(updates.discountPercentage) ||
-        updates.discountPercentage < 0 ||
-        updates.discountPercentage > 100
-      )
-    ) {
-      return res.status(400).json({
-        message: "Discount must be between 0 and 100",
-      });
-    }
-
-    if (
-      updates.isActive !== undefined &&
-      typeof updates.isActive !== "boolean"
-    ) {
-      return res.status(400).json({
-        message: "isActive must be true or false",
-      });
-    }
-
-    // Rapikan input teks
-    for (const field of ["name", "description", "category", "image"]) {
-      if (updates[field] !== undefined) {
-        updates[field] = updates[field].trim();
-      }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID." });
     }
 
     // Hanya pemilik produk yang boleh mengedit
-    const product = await Product.findOneAndUpdate(
-      {
-        _id: id,
-        seller: req.user.userId,
-      },
-      { $set: updates },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    const product = await Product.findOne({
+      _id: id,
+      seller: req.user.userId,
+    });
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found or you do not own this product",
+        message: "Product not found or you do not own this product.",
       });
     }
 
-    res.status(200).json({
-      message: "Product updated successfully",
+    const body = req.body;
+
+    if (body.name !== undefined) {
+      const name = String(body.name).trim();
+      if (!name) {
+        return res
+          .status(400)
+          .json({ message: "Product name cannot be empty." });
+      }
+      product.name = name;
+    }
+
+    if (body.description !== undefined) {
+      const description = String(body.description).trim();
+      if (!description) {
+        return res
+          .status(400)
+          .json({ message: "Description cannot be empty." });
+      }
+      product.description = description;
+    }
+
+    if (body.category !== undefined) {
+      const category = String(body.category).trim();
+      if (!category) {
+        return res
+          .status(400)
+          .json({ message: "Category cannot be empty." });
+      }
+      product.category = category;
+    }
+
+    if (body.price !== undefined) {
+      const price = Number(body.price);
+      if (!Number.isFinite(price) || price < 0) {
+        return res.status(400).json({
+          message: "Price must be a valid non-negative number.",
+        });
+      }
+      product.price = price;
+    }
+
+    if (body.stock !== undefined) {
+      const stock = Number(body.stock);
+      if (!Number.isInteger(stock) || stock < 0) {
+        return res.status(400).json({
+          message: "Stock must be a non-negative whole number.",
+        });
+      }
+      product.stock = stock;
+    }
+
+    if (body.discountPercentage !== undefined) {
+      const discount = Number(body.discountPercentage);
+      if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+        return res.status(400).json({
+          message: "Discount must be between 0 and 100.",
+        });
+      }
+      product.discountPercentage = discount;
+    }
+
+    if (body.isActive !== undefined) {
+      product.isActive = body.isActive === true || body.isActive === "true";
+    }
+
+    // Gambar: hapus yang dipilih seller, lalu tambah yang baru (maksimal 8)
+    const newImages = toImagePaths(req.files);
+
+    let removeList = [];
+    if (body.removeImages) {
+      try {
+        const parsed = JSON.parse(body.removeImages);
+        if (Array.isArray(parsed)) removeList = parsed.map(String);
+      } catch {
+        return res
+          .status(400)
+          .json({ message: "Invalid removeImages value." });
+      }
+    }
+
+    let filesToDelete = [];
+
+    if (newImages.length > 0 || removeList.length > 0) {
+      const currentImages =
+        Array.isArray(product.images) && product.images.length
+          ? product.images
+          : product.image
+          ? [product.image]
+          : [];
+
+      // Hanya gambar milik produk ini yang boleh dihapus
+      const toRemove = currentImages.filter((img) => removeList.includes(img));
+      const remaining = currentImages.filter((img) => !toRemove.includes(img));
+      const finalImages = [...remaining, ...newImages];
+
+      if (finalImages.length === 0) {
+        return res.status(400).json({
+          message: "A product must have at least one image.",
+        });
+      }
+
+      if (finalImages.length > MAX_IMAGES) {
+        return res.status(400).json({
+          message: `You can add a maximum of ${MAX_IMAGES} images per product.`,
+        });
+      }
+
+      product.images = finalImages;
+      product.image = finalImages[0];
+      filesToDelete = toRemove;
+    }
+
+    await product.save();
+
+    // Hapus file fisiknya setelah DB berhasil disimpan (abaikan kalau sudah tidak ada)
+    for (const img of filesToDelete) {
+      if (img.startsWith("/uploads/")) {
+        fs.unlink(
+          path.join(__dirname, "..", "uploads", path.basename(img)),
+          () => {}
+        );
+      }
+    }
+
+    return res.status(200).json({
+      message: "Product updated successfully.",
       product,
     });
   } catch (error) {
-    const isInvalidId = error.name === "CastError";
+    console.error("Update product error:", error.message);
 
-    res.status(isInvalidId ? 400 : 500).json({
-      message: isInvalidId
-        ? "Invalid product ID"
-        : "Failed to update product",
-      error: error.message,
-    });
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Failed to update product." });
   }
 };
 
-// DELETE: Menghapus produk milik seller
+// DELETE: hapus produk milik seller
 const deleteProduct = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid product ID." });
+    }
+
     const product = await Product.findOneAndDelete({
       _id: req.params.id,
       seller: req.user.userId,
@@ -341,31 +340,25 @@ const deleteProduct = async (req, res) => {
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found or you do not own this product",
+        message: "Product not found or you do not own this product.",
       });
     }
 
-    res.status(200).json({
-      message: "Product deleted successfully",
+    return res.status(200).json({
+      message: "Product deleted successfully.",
     });
   } catch (error) {
-    const isInvalidId = error.name === "CastError";
-
-    res.status(isInvalidId ? 400 : 500).json({
-      message: isInvalidId
-        ? "Invalid product ID"
-        : "Failed to delete product",
-      error: error.message,
-    });
+    console.error("Delete product error:", error.message);
+    return res.status(500).json({ message: "Failed to delete product." });
   }
 };
 
 module.exports = {
   getProducts,
+  getAllProducts,
   getMyProducts,
+  getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-  getAllProducts,
-  getProductById,
 };
