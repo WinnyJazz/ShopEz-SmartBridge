@@ -2,7 +2,6 @@ const User = require("../models/User");
 
 const sellerMiddleware = async (req, res, next) => {
   try {
-    // authMiddleware harus dijalankan sebelumnya
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -11,7 +10,6 @@ const sellerMiddleware = async (req, res, next) => {
       });
     }
 
-    // Periksa role terbaru dari database
     const user = await User.findById(userId).select("role");
 
     if (!user) {

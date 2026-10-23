@@ -26,6 +26,23 @@ const userSchema = new mongoose.Schema(
       enum: ["buyer", "seller"],
       default: "buyer",
     },
+    shopName: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+    default: ""
+  },
+  shopDescription: {
+    type: String,
+    trim: true,
+    maxlength: 1000,
+    default: ""
+  },
+  shopImage: {
+    type: String,
+    default: ""
+  }
+  
   },
   {
     timestamps: true,
