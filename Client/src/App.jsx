@@ -12,6 +12,7 @@ import ProductDetails from "./pages/ProductDetails";
 import Catalogue from "./pages/Catalogue";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import ViewMyShop from "./pages/seller/ViewMyShop";
 
 function MainLayout({ children }) {
   return (
@@ -94,6 +95,14 @@ export default function App() {
           element={
             <MainLayout>
                <Profile />
+            </MainLayout>
+        } 
+        />
+        <Route 
+          path="/seller/shop" 
+          element={
+            <MainLayout>
+               <ViewMyShop  />
             </MainLayout>
         } 
         />

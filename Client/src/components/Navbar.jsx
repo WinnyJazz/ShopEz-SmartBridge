@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -8,6 +7,8 @@ import {
   LogOut,
   Settings,
   ChevronRight,
+  Store,
+  ClipboardList,
 } from "lucide-react";
 import "./Navbar.css";
 
@@ -53,14 +54,14 @@ function Navbar() {
     navigate("/");
   }
 
+  const isSeller = user?.role === "seller";
+
   return (
     <nav className="navbar">
-      {/* Logo */}
       <Link to="/" className="navbar-logo">
         ShopEZ
       </Link>
 
-      {/* Search Bar */}
       <div className="navbar-search">
         <input
           type="text"
@@ -69,7 +70,6 @@ function Navbar() {
         />
       </div>
 
-      {/* Right Side */}
       <div className="navbar-actions">
         <Link
           to="/favorites"
@@ -96,15 +96,22 @@ function Navbar() {
                 onClick={() => setIsProfileOpen((open) => !open)}
                 aria-expanded={isProfileOpen}
               >
-                <User size={18} strokeWidth={1.8} />
+                {isSeller ? (
+                  <Store size={18} strokeWidth={1.8} />
+                ) : (
+                  <User size={18} strokeWidth={1.8} />
+                )}
                 <span>{user.name || "My Account"}</span>
               </button>
 
-              {user && isProfileOpen && (
+              {isProfileOpen && (
                 <div className="profile-dropdown">
                   <div className="profile-dropdown-header">
                     <strong>Hi, {user.name}!</strong>
                     <span>{user.email}</span>
+                    <small className="profile-role">
+                      {isSeller ? "Seller Account" : "Buyer Account"}
+                    </small>
                   </div>
 
                   <Link
@@ -112,7 +119,7 @@ function Navbar() {
                     className="profile-dropdown-item"
                     onClick={() => setIsProfileOpen(false)}
                   >
-                    <User size={18} />
+                    <Settings size={18} />
                     <span>My Account</span>
                   </Link>
 
@@ -122,10 +129,33 @@ function Navbar() {
                     onClick={() => setIsProfileOpen(false)}
                   >
                     <ShoppingBag size={18} />
-                    <span>My Purchase</span>
+                    <span>My Orders</span>
                   </Link>
 
+                  {isSeller && (
+                    <>
+                      <Link
+                        to="/seller/sales"
+                        className="profile-dropdown-item"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <ClipboardList size={18} />
+                        <span>My Sales</span>
+                      </Link>
+
+                      <Link
+                        to="/seller/shop"
+                        className="profile-dropdown-item"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <Store size={18} />
+                        <span>View My Shop</span>
+                      </Link>
+                    </>
+                  )}
+
                   <button
+                    type="button"
                     className="profile-dropdown-item logout-item"
                     onClick={handleLogout}
                   >
