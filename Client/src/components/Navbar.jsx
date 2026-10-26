@@ -10,6 +10,7 @@ import {
   Store,
   ClipboardList,
 } from "lucide-react";
+import { resolveImage } from "../utils/productHelpers";
 import "./Navbar.css";
 
 function Navbar() {
@@ -96,11 +97,37 @@ function Navbar() {
                 onClick={() => setIsProfileOpen((open) => !open)}
                 aria-expanded={isProfileOpen}
               >
-                {isSeller ? (
-                  <Store size={18} strokeWidth={1.8} />
-                ) : (
-                  <User size={18} strokeWidth={1.8} />
-                )}
+                <span className="navbar-avatar">
+                  {user.profileImage ? (
+                    <>
+                      {isSeller ? (
+                        <Store
+                          className="navbar-avatar-fallback"
+                          size={18}
+                          strokeWidth={1.8}
+                        />
+                      ) : (
+                        <User
+                          className="navbar-avatar-fallback"
+                          size={18}
+                          strokeWidth={1.8}
+                        />
+                      )}
+                      <img
+                        className="navbar-avatar-image"
+                        src={resolveImage(user.profileImage)}
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                        }}
+                      />
+                    </>
+                  ) : isSeller ? (
+                    <Store size={18} strokeWidth={1.8} />
+                  ) : (
+                    <User size={18} strokeWidth={1.8} />
+                  )}
+                </span>
                 <span>{user.name || "My Account"}</span>
               </button>
 
@@ -135,7 +162,7 @@ function Navbar() {
                   {isSeller && (
                     <>
                       <Link
-                        to="/seller/sales"
+                        to="/seller/orders"
                         className="profile-dropdown-item"
                         onClick={() => setIsProfileOpen(false)}
                       >
