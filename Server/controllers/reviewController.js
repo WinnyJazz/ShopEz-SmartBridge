@@ -32,7 +32,7 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-// POST: Buyer memberikan atau memperbarui review
+// POST: Pembeli dengan order selesai memberikan atau memperbarui review.
 const createOrUpdateReview = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -45,10 +45,9 @@ const createOrUpdateReview = async (req, res) => {
       });
     }
 
-    // Hanya buyer yang boleh memberikan review
-    if (req.user.role !== "buyer") {
+    if (!mongoose.isValidObjectId(req.user.userId)) {
       return res.status(403).json({
-        message: "Only buyers can review products.",
+        message: "A valid user session is required to review products.",
       });
     }
 
@@ -81,7 +80,7 @@ const createOrUpdateReview = async (req, res) => {
       });
     }
 
-    // Buyer harus memiliki order completed
+    // Akun apa pun hanya bisa review jika memiliki order completed
     // yang mencakup produk ini.
     const completedOrder = await Order.findOne({
       buyer: req.user.userId,

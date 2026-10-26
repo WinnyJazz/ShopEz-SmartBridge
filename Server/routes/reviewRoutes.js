@@ -12,7 +12,7 @@ const {
 // Public: melihat review produk
 router.get("/:productId", getProductReviews);
 
-// Protected: buyer mengirim atau memperbarui review
+// Protected: pengguna dengan order selesai mengirim atau memperbarui review
 router.post("/:productId", authMiddleware, createOrUpdateReview);
 
 module.exports = router;
