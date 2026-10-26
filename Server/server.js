@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const shopRoutes = require("./routes/shopRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,11 +26,19 @@ app.get("/api/shop/test", (req, res) => {
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/favorites", require("./routes/favoriteRoutes"));
+app.use("/api/reviews", reviewRoutes);
 
 // Test route
 app.get("/", (req, res) => {
   res.json({
     message: "ShopEZ API is running!",
+  });
+});
+
+app.get("/api/reviews/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Review route works!",
   });
 });
 
