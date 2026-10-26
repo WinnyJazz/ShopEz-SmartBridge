@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import useProducts from "../hooks/useProducts";
 import useFavorites from "../hooks/useFavorites";
+import { PRODUCT_CATEGORIES } from "../constants/productCategories";
 import { formatPrice } from "../utils/productHelpers";
 import "./Home.css";
 
@@ -47,44 +48,6 @@ const banners = [
     image:
       "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=1100&q=85",
     label: "Best Sellers",
-  },
-];
-
-const categories = [
-  {
-    name: "Audio",
-    description: "Headphones & speakers",
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&q=80",
-    color: "#E9EFFB",
-  },
-  {
-    name: "Smartphones",
-    description: "Phones & accessories",
-    image:
-      "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=500&q=80",
-    color: "#E8EDF6",
-  },
-  {
-    name: "Wearables",
-    description: "Smartwatches & fitness",
-    image:
-      "https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=500&q=80",
-    color: "#E8F0F8",
-  },
-  {
-    name: "Accessories",
-    description: "Everyday essentials",
-    image:
-      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=500&q=80",
-    color: "#EEF0F6",
-  },
-  {
-    name: "Gaming",
-    description: "Level up your setup",
-    image:
-      "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=500&q=80",
-    color: "#E9EBF5",
   },
 ];
 
@@ -204,28 +167,29 @@ export default function Home() {
         </div>
 
         <div className="category-grid">
-          {categories.map((category) => (
+          {PRODUCT_CATEGORIES.map((category) => (
             <button
-              key={category.name}
+              key={category.value}
               className={`category-card ${
-                activeCategory === category.name ? "selected" : ""
+                activeCategory === category.value ? "selected" : ""
               }`}
               style={{ "--category-bg": category.color }}
+              title={`${category.description}: ${category.examples}`}
               onClick={() =>
                 setActiveCategory((current) =>
-                  current === category.name ? "All" : category.name
+                  current === category.value ? "All" : category.value
                 )
               }
             >
               <div className="category-copy">
-                <h3>{category.name}</h3>
+                <h3>{category.label}</h3>
                 <p>{category.description}</p>
                 <span className="category-arrow">
                   <ArrowRight size={17} />
                 </span>
               </div>
 
-              <img src={category.image} alt={category.name} />
+              <img src={category.image} alt={category.label} />
             </button>
           ))}
         </div>

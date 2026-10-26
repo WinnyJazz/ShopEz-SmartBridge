@@ -711,6 +711,7 @@
 }
 
 .shop-product-form input,
+.shop-product-form select,
 .shop-product-form textarea {
   width: 100%;
   min-width: 0;
@@ -728,6 +729,7 @@
 }
 
 .shop-product-form input:focus,
+.shop-product-form select:focus,
 .shop-product-form textarea:focus {
   background: #fff;
   border-color: #8dc9e9;

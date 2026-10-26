@@ -4,9 +4,9 @@ const mongoose = require("mongoose");
 const PRODUCT_CATEGORIES = [
   "Electronics",
   "Fashion",
-  "Beauty & Personal Care",
   "Home & Living",
-  "Lifestyle & Hobbies",
+  "Hobbies & Collectibles",
+  "Lifestyle",
 ];
 
 const productSchema = new mongoose.Schema(

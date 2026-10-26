@@ -11,6 +11,7 @@ import {
   Tag,
   PackageCheck,
 } from "lucide-react";
+import { PRODUCT_CATEGORIES } from "../constants/productCategories";
 import "./FilterSidebar.css";
 
 export const DEFAULT_FILTERS = {
@@ -49,15 +50,6 @@ const SHIPPING_OPTIONS = [
   { value: "express", label: "Express Delivery" },
   { value: "same_day", label: "Same-day Delivery" },
   { value: "free_shipping", label: "Free Shipping" },
-];
-
-const CATEGORIES = [
-  "Electronics",
-  "Fashion",
-  "Home & Living",
-  "Beauty",
-  "Sports",
-  "Accessories",
 ];
 
 function FilterSidebar({
@@ -341,7 +333,7 @@ function FilterSidebar({
           <section className="filter-section">
             <h3>Category</h3>
             <div className="filter-options">
-              {renderCheckboxGroup("categories", CATEGORIES)}
+              {renderCheckboxGroup("categories", PRODUCT_CATEGORIES)}
             </div>
           </section>
 

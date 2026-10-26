@@ -45,7 +45,9 @@ export function normalizeProduct(p) {
     id: p._id,
     name: p.name || "",
     description: p.description || "",
-    category: p.category || "Others",
+    category: Array.isArray(p.category)
+      ? p.category[0] || "Others"
+      : p.category || "Others",
     price,
     originalPrice,
     discount,

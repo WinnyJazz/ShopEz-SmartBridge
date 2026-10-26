@@ -10,13 +10,7 @@ const SELLER_FIELDS = "name shopName shopLocation";
 
 const MAX_IMAGES = 8;
 
-const PRODUCT_CATEGORIES = [
-  "Electronics",
-  "Fashion",
-  "Beauty & Personal Care",
-  "Home & Living",
-  "Lifestyle & Hobbies",
-];
+const PRODUCT_CATEGORIES = Product.PRODUCT_CATEGORIES;
 
 // File hasil upload multer -> path yang disimpan di database.
 const toImagePaths = (files = []) =>

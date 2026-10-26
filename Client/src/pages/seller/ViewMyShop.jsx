@@ -40,7 +40,7 @@ const emptyForm = {
   name: "",
   description: "",
   price: "",
-  category: [],
+  category: "",
   stock: "0",
   discountPercentage: "0",
 };
@@ -191,10 +191,8 @@ function ViewMyShop() {
       description: product.description || "",
       price: String(product.price ?? ""),
       category: Array.isArray(product.category)
-        ? product.category
-        : product.category
-          ? [product.category]
-          : [],
+        ? product.category[0] || ""
+        : product.category || "",
       stock: String(product.stock ?? 0),
       discountPercentage: String(product.discountPercentage ?? 0),
     });
@@ -293,25 +291,6 @@ function ViewMyShop() {
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((previous) => ({ ...previous, [name]: value }));
-  }
-
-  function toggleCategory(category) {
-    setForm((previous) => {
-      const currentCategories = Array.isArray(previous.category)
-        ? previous.category
-        : previous.category
-          ? [previous.category]
-          : [];
-
-      const nextCategories = currentCategories.includes(category)
-        ? currentCategories.filter((item) => item !== category)
-        : [...currentCategories, category];
-
-      return {
-        ...previous,
-        category: nextCategories,
-      };
-    });
   }
 
   async function handleSubmit(event) {
@@ -1083,13 +1062,21 @@ function ViewMyShop() {
               <div className="shop-form-row">
                 <label>
                   Category *
-                  <input
+                  <select
                     name="category"
                     value={form.category}
                     onChange={handleChange}
-                    placeholder="Electronics"
                     required
-                  />
+                  >
+                    <option value="" disabled>
+                      Select a category
+                    </option>
+                    {PRODUCT_CATEGORIES.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Discount (%)
