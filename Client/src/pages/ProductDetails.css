@@ -496,6 +496,10 @@
   font-weight: 800;
 }
 
+.details-add-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 /* RESPONSIVE */
 
 @media (max-width: 850px) {

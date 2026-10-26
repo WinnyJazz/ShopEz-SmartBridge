@@ -842,6 +842,72 @@
   outline-offset: 2px;
 }
 
+/* Link ke detail produk */
+.shop-product-link,
+.shop-product-link:hover,
+.shop-product-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shop-product-name-link,
+.shop-product-name-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shop-product-name-link:hover {
+  text-decoration: underline;
+}
+
+/* Badge jumlah foto di pojok kanan bawah gambar */
+.shop-image-count {
+  position: absolute;
+  right: 11px;
+  bottom: 11px;
+  padding: 4px 8px;
+  color: #fff;
+  background: rgb(20 24 30 / 72%);
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* Tombol preview (ikon mata) */
+.shop-view-button,
+.shop-view-button:visited {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  width: 38px;
+  min-height: 36px;
+  color: #345e76;
+  background: #f0f8fd;
+  border: 1px solid #dcecf6;
+  border-radius: 9px;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.shop-view-button:hover {
+  background: #e0f2fc;
+  border-color: #c5e5f6;
+}
+
+/* Lokasi toko di header */
+.shop-profile-info .shop-location-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 8px;
+  color: #6b7a88;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* Responsive layouts */
 @media (max-width: 1050px) {
   .shop-profile-card {
@@ -1050,4 +1116,66 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Multiple product image previews */
+.shop-product-image-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+
+.shop-product-image-preview-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #e5e8ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #78818c;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.shop-product-image-preview-item img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f4f5f7;
+}
+
+.shop-product-image-preview-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 2px;
+}
+
+.shop-remove-preview {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 24, 30, 0.82);
+  color: #fff;
+  cursor: pointer;
+}
+
+.shop-remove-preview:hover {
+  background: #111827;
+}
+
+.shop-remove-preview:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }

@@ -1,27 +1,12 @@
-
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
+import useFavorites from "../hooks/useFavorites";
+import { formatPrice } from "../utils/productHelpers";
 import "./Favorites.css";
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("favorites")) || [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
-
-  function removeFavorite(id) {
-    setFavorites((previous) =>
-      previous.filter((product) => product.id !== id)
-    );
-  }
+  const { products, loading, error, isLoggedIn, toggleFavorite } =
+    useFavorites({ withProducts: true });
 
   return (
     <main className="favorites-page">
@@ -29,19 +14,34 @@ export default function Favorites() {
         <div className="favorites-heading">
           <span className="favorites-eyebrow">YOUR COLLECTION</span>
           <h1>My Favorites</h1>
-          <p>
-            Keep the products you love in one place.
-          </p>
+          <p>Keep the products you love in one place.</p>
         </div>
 
         <div className="favorites-toolbar">
           <span>
-            {favorites.length}{" "}
-            {favorites.length === 1 ? "item" : "items"} saved
+            {products.length} {products.length === 1 ? "item" : "items"} saved
           </span>
         </div>
 
-        {favorites.length === 0 ? (
+        {error && <p className="favorites-error">{error}</p>}
+
+        {!isLoggedIn ? (
+          <div className="favorites-empty">
+            <div className="favorites-empty-icon">
+              <Heart size={32} strokeWidth={1.5} />
+            </div>
+
+            <h2>Please log in</h2>
+            <p>Log in to see the products you have saved.</p>
+
+            <Link to="/login" className="favorites-shop-button">
+              Log In
+              <ArrowRight size={17} />
+            </Link>
+          </div>
+        ) : loading ? (
+          <p className="favorites-loading">Loading your favorites...</p>
+        ) : products.length === 0 ? (
           <div className="favorites-empty">
             <div className="favorites-empty-icon">
               <Heart size={32} strokeWidth={1.5} />
@@ -49,8 +49,7 @@ export default function Favorites() {
 
             <h2>Your favorites list is empty</h2>
             <p>
-              Explore our collection and save products
-              you would love to have.
+              Explore our collection and save products you would love to have.
             </p>
 
             <Link to="/catalogue" className="favorites-shop-button">
@@ -60,7 +59,7 @@ export default function Favorites() {
           </div>
         ) : (
           <div className="favorites-grid">
-            {favorites.map((product) => (
+            {products.map((product) => (
               <article className="favorite-card" key={product.id}>
                 <div className="favorite-image-wrapper">
                   <Link to={`/product/${product.id}`}>
@@ -74,7 +73,7 @@ export default function Favorites() {
                   <button
                     type="button"
                     className="favorite-remove"
-                    onClick={() => removeFavorite(product.id)}
+                    onClick={() => toggleFavorite(product.id)}
                     aria-label={`Remove ${product.name} from favorites`}
                     title="Remove from favorites"
                   >
@@ -84,11 +83,7 @@ export default function Favorites() {
 
                 <div className="favorite-info">
                   <h3>{product.name}</h3>
-                  <p className="favorite-price">
-                    {typeof product.price === "number"
-                      ? `Rp ${product.price.toLocaleString("id-ID")}`
-                      : product.price}
-                  </p>
+                  <p className="favorite-price">{formatPrice(product.price)}</p>
 
                   <Link
                     to={`/product/${product.id}`}

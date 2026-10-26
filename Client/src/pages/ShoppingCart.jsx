@@ -1,9 +1,8 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Heart,
   Minus,
   Plus,
   ShoppingBag,
@@ -11,73 +10,132 @@ import {
   Tag,
   ShieldCheck,
   Truck,
+  MapPin,
+  LoaderCircle,
 } from "lucide-react";
+import {
+  PRODUCTS_API,
+  formatPrice,
+  normalizeProduct,
+} from "../utils/productHelpers";
+import { getCart, saveCart } from "../utils/cart";
 import "./ShoppingCart.css";
 
-const initialCart = [
-  {
-    id: 1,
-    name: "Nova X Wireless Headphones",
-    category: "Audio",
-    color: "Silver",
-    price: 129,
-    originalPrice: 159,
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&q=85",
-  },
-  {
-    id: 2,
-    name: "EZ Watch Series 4",
-    category: "Wearables",
-    color: "Midnight Black",
-    price: 249,
-    originalPrice: 299,
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=500&q=85",
-  },
-];
-
-const formatPrice = (price) =>
-  `$${price.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+const FREE_SHIPPING_MIN = 500000; // gratis ongkir di atas Rp 500.000
+const SHIPPING_FEE = 15000;
 
 export default function ShoppingCart() {
-  const [cartItems, setCartItems] = useState(initialCart);
+  const navigate = useNavigate();
+
+  const [cartItems, setCartItems] = useState(() => getCart());
+  const [syncing, setSyncing] = useState(() => getCart().length > 0);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoMessage, setPromoMessage] = useState("");
 
-  const subtotal = cartItems.reduce(
+  // Sinkronkan harga & stok dengan data terbaru dari server
+  useEffect(() => {
+    const stored = getCart();
+    if (stored.length === 0) return;
+
+    let cancelled = false;
+
+    async function syncCart() {
+      const updated = await Promise.all(
+        stored.map(async (item) => {
+          try {
+            const response = await fetch(`${PRODUCTS_API}/${item.id}`);
+
+            // Produk sudah dihapus / dinonaktifkan seller
+            if (response.status === 404) {
+              return { ...item, unavailable: true, stock: 0 };
+            }
+
+            if (!response.ok) return item;
+
+            const data = await response.json();
+            const product = normalizeProduct(data.product);
+
+            return {
+              ...item,
+              name: product.name,
+              category: product.category,
+              price: product.price,
+              originalPrice: product.originalPrice,
+              image: product.image,
+              stock: product.stock,
+              shopName: product.shopName,
+              location: product.location,
+              unavailable: false,
+              quantity:
+                product.stock > 0
+                  ? Math.min(item.quantity, product.stock)
+                  : item.quantity,
+            };
+          } catch {
+            // Server nggak terjangkau: pakai data yang tersimpan
+            return item;
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      setCartItems(updated);
+      saveCart(updated);
+      setSyncing(false);
+    }
+
+    syncCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const commit = (items) => {
+    setCartItems(items);
+    saveCart(items);
+  };
+
+  const isAvailable = (item) => !item.unavailable && item.stock > 0;
+
+  const availableItems = cartItems.filter(isAvailable);
+
+  const subtotal = availableItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const originalTotal = cartItems.reduce(
+  const originalTotal = availableItems.reduce(
     (sum, item) => sum + item.originalPrice * item.quantity,
     0
   );
 
   const discount = originalTotal - subtotal;
-  const shipping = subtotal === 0 || subtotal >= 200 ? 0 : 8.99;
-  const promoDiscount = promoApplied ? subtotal * 0.1 : 0;
+  const shipping =
+    subtotal === 0 || subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
+  const promoDiscount = promoApplied ? Math.round(subtotal * 0.1) : 0;
   const total = subtotal + shipping - promoDiscount;
 
   const updateQuantity = (id, amount) => {
-    setCartItems((items) =>
-      items.map((item) =>
+    commit(
+      cartItems.map((item) =>
         item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + amount) }
+          ? {
+              ...item,
+              quantity: Math.min(
+                Math.max(1, item.quantity + amount),
+                item.stock > 0 ? item.stock : 1
+              ),
+            }
           : item
       )
     );
   };
 
   const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+    commit(cartItems.filter((item) => item.id !== id));
   };
 
   const applyPromo = () => {
@@ -90,10 +148,12 @@ export default function ShoppingCart() {
     }
   };
 
+  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <main className="cart-page">
       <div className="cart-breadcrumb">
-        <a href="/">Home</a>
+        <Link to="/">Home</Link>
         <span>/</span>
         <span>Shopping Cart</span>
       </div>
@@ -101,7 +161,9 @@ export default function ShoppingCart() {
       <div className="cart-heading">
         <div>
           <p className="cart-eyebrow">YOUR SHOPPING SPACE</p>
-          <h1>Shopping Cart<span>.</span></h1>
+          <h1>
+            Shopping Cart<span>.</span>
+          </h1>
           <p className="cart-subtitle">
             Review your selections before checking out.
           </p>
@@ -109,9 +171,7 @@ export default function ShoppingCart() {
 
         <div className="cart-count">
           <ShoppingBag size={18} />
-          <span>
-            {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items
-          </span>
+          <span>{itemCount} items</span>
         </div>
       </div>
 
@@ -121,84 +181,128 @@ export default function ShoppingCart() {
             <ShoppingBag size={37} strokeWidth={1.5} />
           </div>
           <h2>Your cart is looking a little empty.</h2>
-          <p>
-            Find something you love and make it yours.
-          </p>
-          <a href="/catalogue" className="cart-primary-button">
+          <p>Find something you love and make it yours.</p>
+          <Link to="/catalogue" className="cart-primary-button">
             Explore Products <ArrowRight size={17} />
-          </a>
+          </Link>
         </section>
       ) : (
         <div className="cart-layout">
           <section className="cart-items-section">
             <div className="cart-list-heading">
               <h2>Your Items</h2>
-              <span>{cartItems.length} products</span>
+              <span>
+                {syncing ? (
+                  <>
+                    <LoaderCircle size={13} className="shop-spinner" /> Updating
+                    prices...
+                  </>
+                ) : (
+                  `${cartItems.length} products`
+                )}
+              </span>
             </div>
 
             <div className="cart-items-list">
-              {cartItems.map((item) => (
-                <article className="cart-item" key={item.id}>
-                  <div className="cart-item-image">
-                    <img src={item.image} alt={item.name} />
-                  </div>
+              {cartItems.map((item) => {
+                const available = isAvailable(item);
 
-                  <div className="cart-item-details">
-                    <p className="cart-item-category">{item.category}</p>
-                    <h3>{item.name}</h3>
-                    <p className="cart-item-variant">
-                      Color: <strong>{item.color}</strong>
-                    </p>
+                return (
+                  <article
+                    className={`cart-item ${
+                      available ? "" : "cart-item-unavailable"
+                    }`}
+                    key={item.id}
+                  >
+                    <Link
+                      to={`/product/${item.id}`}
+                      className="cart-item-image"
+                    >
+                      {item.image && <img src={item.image} alt={item.name} />}
+                    </Link>
 
-                    <div className="cart-item-actions">
-                      <div className="quantity-control">
-                        <button
-                          onClick={() => updateQuantity(item.id, -1)}
-                          disabled={item.quantity <= 1}
-                          aria-label={`Decrease ${item.name} quantity`}
+                    <div className="cart-item-details">
+                      <p className="cart-item-category">{item.category}</p>
+                      <h3>
+                        <Link
+                          to={`/product/${item.id}`}
+                          className="cart-item-name-link"
                         >
-                          <Minus size={14} />
-                        </button>
+                          {item.name}
+                        </Link>
+                      </h3>
 
-                        <span>{item.quantity}</span>
+                      {(item.shopName || item.location) && (
+                        <p className="cart-item-shop">
+                          <MapPin size={13} />
+                          {item.shopName}
+                          {item.shopName && item.location ? " · " : ""}
+                          {item.location}
+                        </p>
+                      )}
+
+                      {!available && (
+                        <p className="cart-item-warning">
+                          {item.unavailable
+                            ? "This product is no longer available."
+                            : "Out of stock."}{" "}
+                          It won't be included in your total.
+                        </p>
+                      )}
+
+                      <div className="cart-item-actions">
+                        <div className="quantity-control">
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            disabled={!available || item.quantity <= 1}
+                            aria-label={`Decrease ${item.name} quantity`}
+                          >
+                            <Minus size={14} />
+                          </button>
+
+                          <span>{item.quantity}</span>
+
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            disabled={!available || item.quantity >= item.stock}
+                            aria-label={`Increase ${item.name} quantity`}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
 
                         <button
-                          onClick={() => updateQuantity(item.id, 1)}
-                          aria-label={`Increase ${item.name} quantity`}
+                          className="remove-item-button"
+                          onClick={() => removeItem(item.id)}
                         >
-                          <Plus size={14} />
+                          <Trash2 size={14} />
+                          Remove
                         </button>
                       </div>
-
-                      <button
-                        className="remove-item-button"
-                        onClick={() => removeItem(item.id)}
-                      >
-                        <Trash2 size={14} />
-                        Remove
-                      </button>
                     </div>
-                  </div>
 
-                  <div className="cart-item-prices">
-                    <strong>{formatPrice(item.price * item.quantity)}</strong>
-                    <span>
-                      {formatPrice(item.originalPrice * item.quantity)}
-                    </span>
-                  </div>
-                </article>
-              ))}
+                    <div className="cart-item-prices">
+                      <strong>{formatPrice(item.price * item.quantity)}</strong>
+                      {item.originalPrice > item.price && (
+                        <span>
+                          {formatPrice(item.originalPrice * item.quantity)}
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
-            <a href="/catalogue" className="continue-shopping">
+            <Link to="/catalogue" className="continue-shopping">
               <ArrowLeft size={16} />
               Continue Shopping
-            </a>
+            </Link>
 
             <div className="cart-benefits">
               <div>
                 <Truck size={19} />
-                <span>Free shipping over $200</span>
+                <span>Free shipping over {formatPrice(FREE_SHIPPING_MIN)}</span>
               </div>
               <div>
                 <ShieldCheck size={19} />
@@ -227,9 +331,7 @@ export default function ShoppingCart() {
 
             <div className="summary-line">
               <span>Shipping</span>
-              <strong>
-                {shipping === 0 ? "FREE" : formatPrice(shipping)}
-              </strong>
+              <strong>{shipping === 0 ? "FREE" : formatPrice(shipping)}</strong>
             </div>
 
             {promoApplied && (
@@ -278,9 +380,17 @@ export default function ShoppingCart() {
             </div>
 
             <button
+              type="button"
               className="checkout-button"
+              disabled={availableItems.length === 0 || syncing}
               onClick={() =>
-                alert("Checkout page will be available in the next step!")
+                navigate("/checkout", {
+                  state: {
+                    promoCode: promoApplied
+                      ? promoCode.trim().toUpperCase()
+                      : "",
+                  },
+                })
               }
             >
               Proceed to Checkout <ArrowRight size={18} />
@@ -301,9 +411,9 @@ export default function ShoppingCart() {
           <p>Discover more essentials selected for your everyday.</p>
         </div>
 
-        <a href="/catalogue" className="recommendation-link">
+        <Link to="/catalogue" className="recommendation-link">
           Discover More <ArrowRight size={16} />
-        </a>
+        </Link>
       </section>
     </main>
   );

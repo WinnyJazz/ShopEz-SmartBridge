@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import ShopPaymentSettings from "../../components/ShopPaymentSettings";
+import { PRODUCT_CATEGORIES } from "../../constants/productCategories";
 import {
   Store,
   Star,
@@ -12,19 +15,32 @@ import {
   ImagePlus,
   LoaderCircle,
   Camera,
+  MapPin,
+  Eye,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
+import { API_BASE, formatPrice, resolveImage } from "../../utils/productHelpers";
 import "./ViewMyShop.css";
 
-const API_URL = "http://localhost:5000/api/products";
-const SHOP_API_URL = "http://localhost:5000/api/shop/me";
+const API_URL = `${API_BASE}/api/products`;
+const SHOP_API_URL = `${API_BASE}/api/shop/me`;
+
+const MAX_IMAGES = 8;
+
+const CITY_SUGGESTIONS = [
+  "Jakarta",
+  "Tangerang",
+  "Bandung",
+  "Surabaya",
+  "Yogyakarta",
+  "Medan",
+];
 
 const emptyForm = {
   name: "",
   description: "",
   price: "",
-  category: "",
-  image: "",
+  category: [],
   stock: "0",
   discountPercentage: "0",
 };
@@ -33,6 +49,7 @@ const emptyShopProfile = {
   shopName: "",
   shopDescription: "",
   shopImage: "",
+  shopLocation: "",
 };
 
 function fileToBase64(file) {
@@ -42,6 +59,15 @@ function fileToBase64(file) {
     reader.onerror = () => reject(new Error("Failed to read image."));
     reader.readAsDataURL(file);
   });
+}
+
+function toShopProfile(shop) {
+  return {
+    shopName: shop?.shopName || "",
+    shopDescription: shop?.shopDescription || "",
+    shopImage: shop?.shopImage || "",
+    shopLocation: shop?.shopLocation || "",
+  };
 }
 
 function ViewMyShop() {
@@ -57,7 +83,12 @@ function ViewMyShop() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
-  // Shop profile state
+  // Gambar produk
+  const [selectedProductImages, setSelectedProductImages] = useState([]); // File baru
+  const [productImagePreviews, setProductImagePreviews] = useState([]); // gabungan lama + baru
+  const [removedImages, setRemovedImages] = useState([]); // path gambar lama yang dihapus
+
+  // Shop profile
   const [shopProfile, setShopProfile] = useState(emptyShopProfile);
   const [showShopEditor, setShowShopEditor] = useState(false);
   const [shopDraft, setShopDraft] = useState(emptyShopProfile);
@@ -80,9 +111,7 @@ function ViewMyShop() {
 
     try {
       const response = await fetch(`${API_URL}/mine`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await response.json();
@@ -108,9 +137,7 @@ function ViewMyShop() {
     }
 
     const response = await fetch(SHOP_API_URL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     const data = await response.json();
@@ -119,12 +146,7 @@ function ViewMyShop() {
       throw new Error(data.message || "Failed to load shop profile.");
     }
 
-    const profile = {
-      shopName: data.shop?.shopName || "",
-      shopDescription: data.shop?.shopDescription || "",
-      shopImage: data.shop?.shopImage || "",
-    };
-
+    const profile = toShopProfile(data.shop);
     setShopProfile(profile);
     setShopDraft(profile);
   }
@@ -147,9 +169,16 @@ function ViewMyShop() {
 
   const outOfStock = products.filter((product) => product.stock === 0).length;
 
+  function resetImageState() {
+    setSelectedProductImages([]);
+    setProductImagePreviews([]);
+    setRemovedImages([]);
+  }
+
   function openAddForm() {
     setEditingProduct(null);
     setForm(emptyForm);
+    resetImageState();
     setError("");
     setSuccess("");
     setShowForm(true);
@@ -161,11 +190,31 @@ function ViewMyShop() {
       name: product.name || "",
       description: product.description || "",
       price: String(product.price ?? ""),
-      category: product.category || "",
-      image: product.image || "",
+      category: Array.isArray(product.category)
+        ? product.category
+        : product.category
+          ? [product.category]
+          : [],
       stock: String(product.stock ?? 0),
       discountPercentage: String(product.discountPercentage ?? 0),
     });
+
+    const currentImages =
+      Array.isArray(product.images) && product.images.length
+        ? product.images
+        : product.image
+        ? [product.image]
+        : [];
+
+    setSelectedProductImages([]);
+    setRemovedImages([]);
+    setProductImagePreviews(
+      currentImages.map((raw) => ({
+        url: resolveImage(raw),
+        raw,
+        existing: true,
+      }))
+    );
     setError("");
     setSuccess("");
     setShowForm(true);
@@ -176,15 +225,93 @@ function ViewMyShop() {
     setShowForm(false);
     setEditingProduct(null);
     setForm(emptyForm);
+    resetImageState();
     setError("");
+  }
+
+  function handleProductImageChange(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        setError("Please select JPG, PNG, or WebP images only.");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`Each product image must be 5 MB or smaller: ${file.name}`);
+        event.target.value = "";
+        return;
+      }
+    }
+
+    if (productImagePreviews.length + files.length > MAX_IMAGES) {
+      setError(`You can add a maximum of ${MAX_IMAGES} images per product.`);
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setSelectedProductImages((previous) => [...previous, ...files]);
+    setProductImagePreviews((previous) => [
+      ...previous,
+      ...files.map((file) => ({
+        url: URL.createObjectURL(file),
+        existing: false,
+        fileName: file.name,
+      })),
+    ]);
+    event.target.value = "";
+  }
+
+  // Hapus gambar dari preview: gambar lama dicatat untuk dihapus di server,
+  // gambar baru cukup dibuang dari daftar upload.
+  function removeProductImage(previewIndex) {
+    const preview = productImagePreviews[previewIndex];
+    if (!preview) return;
+
+    if (preview.existing) {
+      setRemovedImages((previous) => [...previous, preview.raw]);
+    } else {
+      const selectedIndex = productImagePreviews
+        .slice(0, previewIndex)
+        .filter((item) => !item.existing).length;
+
+      setSelectedProductImages((previous) =>
+        previous.filter((_, index) => index !== selectedIndex)
+      );
+    }
+
+    setProductImagePreviews((previous) =>
+      previous.filter((_, index) => index !== previewIndex)
+    );
   }
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm((previous) => ({ ...previous, [name]: value }));
+  }
+
+  function toggleCategory(category) {
+    setForm((previous) => {
+      const currentCategories = Array.isArray(previous.category)
+        ? previous.category
+        : previous.category
+          ? [previous.category]
+          : [];
+
+      const nextCategories = currentCategories.includes(category)
+        ? currentCategories.filter((item) => item !== category)
+        : [...currentCategories, category];
+
+      return {
+        ...previous,
+        category: nextCategories,
+      };
+    });
   }
 
   async function handleSubmit(event) {
@@ -201,18 +328,17 @@ function ViewMyShop() {
       description: form.description.trim(),
       price: Number(form.price),
       category: form.category.trim(),
-      image: form.image.trim(),
       stock: Number(form.stock),
       discountPercentage: Number(form.discountPercentage || 0),
     };
 
-    if (
-      !payload.name ||
-      !payload.description ||
-      !payload.category ||
-      !payload.image
-    ) {
+    if (!payload.name || !payload.description || !payload.category) {
       setError("Please complete all required fields.");
+      return;
+    }
+
+    if (productImagePreviews.length === 0) {
+      setError("Please keep or upload at least one product image.");
       return;
     }
 
@@ -241,17 +367,26 @@ function ViewMyShop() {
 
     try {
       const isEditing = Boolean(editingProduct);
-      const url = isEditing
-        ? `${API_URL}/${editingProduct._id}`
-        : API_URL;
+      const url = isEditing ? `${API_URL}/${editingProduct._id}` : API_URL;
+
+      const formData = new FormData();
+      formData.append("name", payload.name);
+      formData.append("description", payload.description);
+      formData.append("price", String(payload.price));
+      formData.append("category", payload.category);
+      formData.append("stock", String(payload.stock));
+      formData.append("discountPercentage", String(payload.discountPercentage));
+
+      if (isEditing && removedImages.length > 0) {
+        formData.append("removeImages", JSON.stringify(removedImages));
+      }
+
+      selectedProductImages.forEach((file) => formData.append("images", file));
 
       const response = await fetch(url, {
         method: isEditing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
 
       const data = await response.json();
@@ -268,6 +403,7 @@ function ViewMyShop() {
       setShowForm(false);
       setEditingProduct(null);
       setForm(emptyForm);
+      resetImageState();
 
       await loadProducts();
     } catch (err) {
@@ -296,9 +432,7 @@ function ViewMyShop() {
     try {
       const response = await fetch(`${API_URL}/${product._id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await response.json();
@@ -368,6 +502,7 @@ function ViewMyShop() {
 
     const name = shopDraft.shopName.trim();
     const description = shopDraft.shopDescription.trim();
+    const location = (shopDraft.shopLocation || "").trim();
 
     if (!name || name.length > 100) {
       setShopError("Shop name must contain 1–100 characters.");
@@ -376,6 +511,11 @@ function ViewMyShop() {
 
     if (description.length > 1000) {
       setShopError("Description cannot exceed 1000 characters.");
+      return;
+    }
+
+    if (location.length > 100) {
+      setShopError("Location cannot exceed 100 characters.");
       return;
     }
 
@@ -400,6 +540,7 @@ function ViewMyShop() {
           shopName: name,
           shopDescription: description,
           shopImage,
+          shopLocation: location,
         }),
       });
 
@@ -409,11 +550,7 @@ function ViewMyShop() {
         throw new Error(data.message || "Failed to save shop profile.");
       }
 
-      const savedProfile = {
-        shopName: data.shop?.shopName || "",
-        shopDescription: data.shop?.shopDescription || "",
-        shopImage: data.shop?.shopImage || "",
-      };
+      const savedProfile = toShopProfile(data.shop);
 
       setShopProfile(savedProfile);
       setShopDraft(savedProfile);
@@ -426,14 +563,6 @@ function ViewMyShop() {
     } finally {
       setSavingShop(false);
     }
-  }
-
-  function formatPrice(price) {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(price);
   }
 
   return (
@@ -468,10 +597,17 @@ function ViewMyShop() {
             <div className="shop-profile-info">
               <span className="shop-eyebrow">SELLER CENTER</span>
               <h1>{shopProfile.shopName || "My Shop"}</h1>
+
+              <p className="shop-location-line">
+                <MapPin size={14} />
+                {shopProfile.shopLocation || "Location not set"}
+              </p>
+
               <p>
                 {shopProfile.shopDescription ||
                   "Add a description to introduce your shop."}
               </p>
+
               <span className="shop-status">
                 <span className="status-dot" />
                 Your shop
@@ -540,7 +676,7 @@ function ViewMyShop() {
             </div>
           </div>
         </section>
-
+        <ShopPaymentSettings />
         <section className="shop-products-section">
           <div className="shop-products-heading">
             <div>
@@ -605,69 +741,115 @@ function ViewMyShop() {
             </div>
           ) : (
             <div className="shop-product-grid">
-              {filteredProducts.map((product) => (
-                <article className="shop-product-card" key={product._id}>
-                  <div className="shop-product-image-wrap">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="shop-product-image"
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
-                    />
-                    {product.discountPercentage > 0 && (
-                      <span className="shop-discount-badge">
-                        -{product.discountPercentage}%
+              {filteredProducts.map((product) => {
+                const cover =
+                  (Array.isArray(product.images) && product.images[0]) ||
+                  product.image;
+                const imageCount =
+                  Array.isArray(product.images) && product.images.length
+                    ? product.images.length
+                    : cover
+                    ? 1
+                    : 0;
+
+                return (
+                  <article className="shop-product-card" key={product._id}>
+                    <Link
+                      to={`/product/${product._id}`}
+                      className="shop-product-image-wrap shop-product-link"
+                      aria-label={`View ${product.name}`}
+                    >
+                      {cover ? (
+                        <img
+                          src={resolveImage(cover)}
+                          alt={product.name}
+                          className="shop-product-image"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <ImagePlus size={30} />
+                      )}
+
+                      {product.discountPercentage > 0 && (
+                        <span className="shop-discount-badge">
+                          -{product.discountPercentage}%
+                        </span>
+                      )}
+
+                      {imageCount > 1 && (
+                        <span className="shop-image-count">
+                          {imageCount} photos
+                        </span>
+                      )}
+                    </Link>
+
+                    <div className="shop-product-content">
+                      <span className="shop-product-category">
+                        {product.category}
                       </span>
-                    )}
-                  </div>
 
-                  <div className="shop-product-content">
-                    <span className="shop-product-category">
-                      {product.category}
-                    </span>
-                    <h3 title={product.name}>{product.name}</h3>
-                    <p className="shop-product-price">
-                      {formatPrice(product.price)}
-                    </p>
+                      <h3 title={product.name}>
+                        <Link
+                          to={`/product/${product._id}`}
+                          className="shop-product-name-link"
+                        >
+                          {product.name}
+                        </Link>
+                      </h3>
 
-                    <div className="shop-product-meta">
-                      <span
-                        className={
-                          product.stock === 0
-                            ? "stock-label stock-empty"
-                            : "stock-label"
-                        }
-                      >
-                        {product.stock === 0
-                          ? "Out of stock"
-                          : `Stock: ${product.stock}`}
-                      </span>
+                      <p className="shop-product-price">
+                        {formatPrice(product.price)}
+                      </p>
+
+                      <div className="shop-product-meta">
+                        <span
+                          className={
+                            product.stock === 0
+                              ? "stock-label stock-empty"
+                              : "stock-label"
+                          }
+                        >
+                          {product.stock === 0
+                            ? "Out of stock"
+                            : `Stock: ${product.stock}`}
+                        </span>
+                      </div>
+
+                      <div className="shop-product-actions">
+                        <Link
+                          to={`/product/${product._id}`}
+                          className="shop-view-button"
+                          aria-label={`Preview ${product.name}`}
+                          title="Preview as buyer"
+                        >
+                          <Eye size={16} />
+                        </Link>
+
+                        <button
+                          type="button"
+                          className="shop-edit-button"
+                          onClick={() => openEditForm(product)}
+                        >
+                          <Pencil size={15} />
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="shop-delete-button"
+                          onClick={() => handleDelete(product)}
+                          aria-label={`Delete ${product.name}`}
+                          title="Delete product"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="shop-product-actions">
-                      <button
-                        type="button"
-                        className="shop-edit-button"
-                        onClick={() => openEditForm(product)}
-                      >
-                        <Pencil size={15} />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="shop-delete-button"
-                        onClick={() => handleDelete(product)}
-                        aria-label={`Delete ${product.name}`}
-                        title="Delete product"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -753,6 +935,27 @@ function ViewMyShop() {
                   required
                   placeholder="Enter your shop name"
                 />
+              </label>
+
+              <label>
+                Shop Location (City)
+                <input
+                  list="shop-city-options"
+                  value={shopDraft.shopLocation || ""}
+                  onChange={(event) =>
+                    setShopDraft((previous) => ({
+                      ...previous,
+                      shopLocation: event.target.value,
+                    }))
+                  }
+                  maxLength={100}
+                  placeholder="e.g. Jakarta"
+                />
+                <datalist id="shop-city-options">
+                  {CITY_SUGGESTIONS.map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
               </label>
 
               <label>
@@ -903,27 +1106,49 @@ function ViewMyShop() {
               </div>
 
               <label>
-                Image URL *
+                Product Images *
                 <input
-                  name="image"
-                  type="url"
-                  value={form.image}
-                  onChange={handleChange}
-                  placeholder="https://example.com/product.jpg"
-                  required
+                  name="images"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={handleProductImageChange}
                 />
+                <span className="shop-stat-note">
+                  {productImagePreviews.length}/{MAX_IMAGES} images · JPG, PNG,
+                  or WebP · Maximum 5 MB each · The first image is the cover
+                </span>
               </label>
 
-              {form.image && (
-                <div className="shop-image-preview">
-                  <img
-                    src={form.image}
-                    alt="Product preview"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                  />
-                  <span>Image preview</span>
+              {productImagePreviews.length > 0 && (
+                <div className="shop-product-image-previews">
+                  {productImagePreviews.map((preview, index) => (
+                    <div
+                      className="shop-product-image-preview-item"
+                      key={`${preview.url}-${index}`}
+                    >
+                      <img
+                        src={preview.url}
+                        alt={`Product preview ${index + 1}`}
+                      />
+                      <span>
+                        {index === 0
+                          ? "Cover"
+                          : preview.existing
+                          ? `Image ${index + 1}`
+                          : preview.fileName || `New image ${index + 1}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="shop-remove-preview"
+                        onClick={() => removeProductImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                        disabled={saving}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -962,8 +1187,8 @@ function ViewMyShop() {
                   {saving
                     ? "Saving..."
                     : editingProduct
-                      ? "Save Changes"
-                      : "Add Product"}
+                    ? "Save Changes"
+                    : "Add Product"}
                 </button>
               </div>
             </form>

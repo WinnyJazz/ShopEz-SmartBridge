@@ -7,12 +7,15 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ShoppingCart from "./pages/ShoppingCart";
+import Checkout from "./pages/Checkout";
 import ProductDetails from "./pages/ProductDetails";
 import Catalogue from "./pages/Catalogue";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import ViewMyShop from "./pages/seller/ViewMyShop";
 import AuthExpiryWatcher from "./components/AuthExpiryWatcher";
+import SellerOrders from "./pages/SellerOrders";
+import OrderDetail from "./pages/OrderDetail";
 
 function MainLayout({ children }) {
   return (
@@ -67,6 +70,15 @@ export default function App() {
         />
 
         <Route
+          path="/checkout"
+          element={
+            <MainLayout>
+              <Checkout />
+            </MainLayout>
+          }
+        />
+
+        <Route
           path="/product/:id"
           element={
             <MainLayout>
@@ -110,6 +122,30 @@ export default function App() {
             </MainLayout>
           }
         />
+
+        
+        <Route
+          path="/seller/orders"
+          element={
+            <MainLayout>
+              <SellerOrders />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/orders/:id"
+          element={
+            <MainLayout>
+              <OrderDetail />
+            </MainLayout>
+          }
+        />
+
+
+        
+
+        
       </Routes>
     </BrowserRouter>
   );

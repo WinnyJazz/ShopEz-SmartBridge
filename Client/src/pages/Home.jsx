@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,7 +7,11 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  PackageSearch,
 } from "lucide-react";
+import useProducts from "../hooks/useProducts";
+import useFavorites from "../hooks/useFavorites";
+import { formatPrice } from "../utils/productHelpers";
 import "./Home.css";
 
 const banners = [
@@ -84,89 +88,37 @@ const categories = [
   },
 ];
 
-const products = [
-  {
-    id: 1,
-    name: "Nova X Wireless Headphones",
-    category: "Audio",
-    price: 129,
-    originalPrice: 159,
-    rating: 4.8,
-    reviews: "2.1k",
-    badge: "BEST SELLER",
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    id: 2,
-    name: "AeroPhone 15 Pro",
-    category: "Smartphones",
-    price: 799,
-    originalPrice: 999,
-    rating: 4.7,
-    reviews: "1.4k",
-    badge: "20% OFF",
-    image:
-      "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    id: 3,
-    name: "EZ Watch Series 4",
-    category: "Wearables",
-    price: 249,
-    originalPrice: 299,
-    rating: 4.9,
-    reviews: "3.2k",
-    badge: "NEW",
-    image:
-      "https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    id: 4,
-    name: "Pulse Buds Pro",
-    category: "Accessories",
-    price: 89,
-    originalPrice: 105,
-    rating: 4.6,
-    reviews: "1.8k",
-    badge: "15% OFF",
-    image:
-      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=700&q=85",
-  },
-];
-
-function formatPrice(price) {
-  return `$${price.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+const MAX_HOME_PRODUCTS = 8;
 
 export default function Home() {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [wishlist, setWishlist] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
+
+  const navigate = useNavigate();
+  const { products, loading, error } = useProducts();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const currentBanner = banners[activeSlide];
 
   const changeSlide = (direction) => {
-    setActiveSlide((current) =>
-      (current + direction + banners.length) % banners.length
+    setActiveSlide(
+      (current) => (current + direction + banners.length) % banners.length
     );
   };
 
-  const toggleWishlist = (productId) => {
-    setWishlist((current) =>
-      current.includes(productId)
-        ? current.filter((id) => id !== productId)
-        : [...current, productId]
-    );
+  const handleToggleFavorite = async (productId) => {
+    const ok = await toggleFavorite(productId);
+    if (!ok) navigate("/login"); // belum login
   };
 
-  const filteredProducts =
+  const filteredProducts = (
     activeCategory === "All"
       ? products
-      : products.filter((product) => product.category === activeCategory);
+      : products.filter(
+          (product) =>
+            product.category.toLowerCase() === activeCategory.toLowerCase()
+        )
+  ).slice(0, MAX_HOME_PRODUCTS);
 
   return (
     <main className="home-page">
@@ -184,9 +136,7 @@ export default function Home() {
               <span>{currentBanner.highlight}</span>
             </h1>
 
-            <p className="hero-description">
-              {currentBanner.description}
-            </p>
+            <p className="hero-description">{currentBanner.description}</p>
 
             <a className="hero-button" href="#picked-for-you">
               {currentBanner.button}
@@ -232,9 +182,7 @@ export default function Home() {
           {banners.map((banner, index) => (
             <button
               key={banner.label}
-              className={`hero-dot ${
-                index === activeSlide ? "active" : ""
-              }`}
+              className={`hero-dot ${index === activeSlide ? "active" : ""}`}
               onClick={() => setActiveSlide(index)}
               aria-label={`Show slide ${index + 1}`}
             />
@@ -250,9 +198,9 @@ export default function Home() {
             <h2>Shop by Category</h2>
           </div>
 
-          <a href="/catalogue" className="section-link">
+          <Link to="/catalogue" className="section-link">
             View All <ArrowRight size={17} />
-          </a>
+          </Link>
         </div>
 
         <div className="category-grid">
@@ -289,15 +237,13 @@ export default function Home() {
           <div>
             <p className="section-eyebrow">CURATED FOR YOU</p>
             <h2>
-              {activeCategory === "All"
-                ? "Picked for You"
-                : activeCategory}
+              {activeCategory === "All" ? "Picked for You" : activeCategory}
             </h2>
           </div>
 
-          <a href="/catalogue" className="section-link">
+          <Link to="/catalogue" className="section-link">
             View All <ArrowRight size={17} />
-          </a>
+          </Link>
         </div>
 
         {activeCategory !== "All" && (
@@ -309,98 +255,118 @@ export default function Home() {
           </button>
         )}
 
-        <div className="product-grid">
-          {filteredProducts.map((product) => {
-            const isWishlisted = wishlist.includes(product.id);
-            const discount = Math.round(
-              ((product.originalPrice - product.price) /
-                product.originalPrice) *
-                100
-            );
+        {loading && <p className="empty-products">Loading products...</p>}
 
-            return (
-              <article className="product-card" key={product.id}>
-                <div className="product-image-wrap">
-                  <span
-                    className={`product-badge ${
-                      product.badge === "BEST SELLER"
-                        ? "badge-best"
-                        : product.badge === "NEW"
-                        ? "badge-new"
-                        : "badge-sale"
-                    }`}
-                  >
-                    {product.badge}
-                  </span>
+        {!loading && error && <p className="empty-products">{error}</p>}
 
-                  <button
-                    className={`wishlist-button ${
-                      isWishlisted ? "wishlisted" : ""
-                    }`}
-                    onClick={() => toggleWishlist(product.id)}
-                    aria-label={
-                      isWishlisted
-                        ? "Remove from wishlist"
-                        : "Add to wishlist"
-                    }
-                  >
-                    <Heart
-                      size={19}
-                      fill={isWishlisted ? "currentColor" : "none"}
-                    />
-                  </button>
+        {!loading && !error && (
+          <div className="product-grid">
+            {filteredProducts.map((product) => {
+              const isWishlisted = isFavorite(product.id);
+              const badge = product.isNew
+                ? "NEW"
+                : product.discount > 0
+                ? `${product.discount}% OFF`
+                : "";
 
-                  <a
-                    href={`/product/${product.id}`}
-                    className="product-image-link"
-                    aria-label={`View ${product.name}`}
-                  >
-                    <img src={product.image} alt={product.name} />
-                  </a>
-                </div>
+              return (
+                <article className="product-card" key={product.id}>
+                  <div className="product-image-wrap">
+                    {badge && (
+                      <span
+                        className={`product-badge ${
+                          product.isNew ? "badge-new" : "badge-sale"
+                        }`}
+                      >
+                        {badge}
+                      </span>
+                    )}
 
-                <div className="product-info">
-                  <p className="product-category">{product.category}</p>
-                  <a
-                    href={`/product/${product.id}`}
-                    className="product-name"
-                  >
-                    {product.name}
-                  </a>
+                    <button
+                      className={`wishlist-button ${
+                        isWishlisted ? "wishlisted" : ""
+                      }`}
+                      onClick={() => handleToggleFavorite(product.id)}
+                      aria-label={
+                        isWishlisted
+                          ? "Remove from wishlist"
+                          : "Add to wishlist"
+                      }
+                    >
+                      <Heart
+                        size={19}
+                        fill={isWishlisted ? "currentColor" : "none"}
+                      />
+                    </button>
 
-                  <div className="product-rating">
-                    <span className="rating-stars">
-                      <Star size={13} fill="currentColor" />
-                    </span>
-                    <span>{product.rating}</span>
-                    <span className="rating-reviews">
-                      ({product.reviews})
-                    </span>
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="product-image-link"
+                      aria-label={`View ${product.name}`}
+                    >
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} />
+                      ) : (
+                        <PackageSearch size={40} strokeWidth={1.2} />
+                      )}
+                    </Link>
                   </div>
 
-                  <div className="product-pricing">
-                    <span className="product-price">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="product-original-price">
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                    <span className="product-discount">{discount}% OFF</span>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                  <div className="product-info">
+                    <p className="product-category">{product.category}</p>
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="product-name"
+                    >
+                      {product.name}
+                    </Link>
 
-        {filteredProducts.length === 0 && (
-          <p className="empty-products">No products found in this category.</p>
+                    {product.rating !== null && (
+                      <div className="product-rating">
+                        <span className="rating-stars">
+                          <Star size={13} fill="currentColor" />
+                        </span>
+                        <span>{product.rating}</span>
+                        <span className="rating-reviews">
+                          ({product.reviews})
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="product-pricing">
+                      <span className="product-price">
+                        {formatPrice(product.price)}
+                      </span>
+                      {product.discount > 0 && (
+                        <>
+                          <span className="product-original-price">
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                          <span className="product-discount">
+                            {product.discount}% OFF
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && !error && filteredProducts.length === 0 && (
+          <p className="empty-products">
+            {products.length === 0
+              ? "No products have been listed yet."
+              : "No products found in this category."}
+          </p>
         )}
 
         <div className="products-bottom">
-          <a href="/catalogue" className="outline-button">
+          <Link to="/catalogue" className="outline-button">
             Explore All Products <ArrowRight size={17} />
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -414,9 +380,9 @@ export default function Home() {
           <h2>Good tech. Better everyday.</h2>
           <p>Discover essentials that fit your lifestyle.</p>
         </div>
-        <a href="/catalogue" className="promo-button">
+        <Link to="/catalogue" className="promo-button">
           Start Exploring <ArrowRight size={17} />
-        </a>
+        </Link>
       </section>
     </main>
   );
