@@ -1,5 +1,61 @@
 
 const User = require("../models/User");
+const Product = require("../models/Product");
+const mongoose = require("mongoose");
+
+// GET: profil publik toko dan produk aktifnya.
+exports.getPublicShop = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+
+    if (!mongoose.isValidObjectId(sellerId)) {
+      return res.status(404).json({
+        success: false,
+        message: "Shop not found.",
+      });
+    }
+
+    const seller = await User.findOne({
+      _id: sellerId,
+      role: "seller",
+    }).select("name shopName shopDescription shopImage profileImage shopLocation");
+
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Shop not found.",
+      });
+    }
+
+    const products = await Product.find({
+      seller: seller._id,
+      isActive: { $ne: false },
+    })
+      .populate("seller", "shopName shopLocation shopImage profileImage")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      shop: {
+        id: seller._id,
+        name: seller.name || "",
+        shopName: seller.shopName || "",
+        shopDescription: seller.shopDescription || "",
+        shopImage: seller.shopImage || "",
+        profileImage: seller.profileImage || "",
+        shopLocation: seller.shopLocation || "",
+      },
+      products,
+    });
+  } catch (error) {
+    console.error("Get public shop error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load shop.",
+    });
+  }
+};
 
 // GET: Ambil profil toko milik seller
 exports.getMyShopProfile = async (req, res) => {

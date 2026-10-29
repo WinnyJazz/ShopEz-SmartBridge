@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const {
+  getPublicShop,
   getMyShopProfile,
   updateMyShopProfile,
   getMyPaymentSettings,
@@ -27,5 +28,8 @@ router.put("/payment", authMiddleware, updateMyPaymentSettings);
 // Pengajuan menjadi seller
 router.get("/application/me", authMiddleware, getMyApplication);
 router.post("/apply", authMiddleware, uploadIdentityPhoto, applyForSeller);
+
+// Public shop page; keep after static shop routes.
+router.get("/:sellerId", getPublicShop);
 
 module.exports = router;

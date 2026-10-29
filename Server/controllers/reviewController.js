@@ -174,7 +174,11 @@ const getMyReviews = async (req, res) => {
     const reviews = await Review.find({ buyer: userId })
       .populate({
         path: "product",
-        select: "name title price images image category",
+        select: "name title price images image category seller",
+        populate: {
+          path: "seller",
+          select: "name shopName shopImage profileImage shopLocation",
+        },
       })
       .sort({ createdAt: -1 });
 

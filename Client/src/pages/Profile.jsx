@@ -42,9 +42,10 @@ import {
 
 } from "lucide-react";
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import MyOrders from "./MyOrders";
+import { resolveImage } from "../utils/productHelpers";
 
 import "./Profile.css";
 
@@ -1472,22 +1473,28 @@ export default function Profile() {
 
       case "history":
         return (
-          <div className="profile-activity-section">
-            <div className="profile-content-heading">
+          <div className="profile-activity-section profile-history-section">
+            <div className="profile-content-heading profile-history-heading">
               <div>
                 <span className="profile-eyebrow">YOUR TRANSACTIONS</span>
                 <h2>Purchase History</h2>
                 <p>View your completed and cancelled transactions.</p>
               </div>
+              {!historyLoading && !historyError && purchaseHistory.length > 0 && (
+                <span className="profile-history-count">
+                  {purchaseHistory.length}{" "}
+                  {purchaseHistory.length === 1 ? "order" : "orders"}
+                </span>
+              )}
             </div>
 
             {historyLoading ? (
-              <div className="profile-activity-message">
+              <div className="profile-history-state" role="status">
                 <LoaderCircle size={24} className="seller-spinner" />
                 <p>Loading purchase history...</p>
               </div>
             ) : historyError ? (
-              <div className="profile-activity-message">
+              <div className="profile-history-state profile-history-error" role="alert">
                 <p>{historyError}</p>
                 <button
                   type="button"
@@ -1498,7 +1505,7 @@ export default function Profile() {
                 </button>
               </div>
             ) : purchaseHistory.length === 0 ? (
-              <div className="profile-empty-state">
+              <div className="profile-empty-state profile-history-empty">
                 <div className="profile-empty-icon">
                   <History size={30} />
                 </div>
@@ -1514,77 +1521,120 @@ export default function Profile() {
                 </button>
               </div>
             ) : (
-              <div className="profile-activity-list">
-                {purchaseHistory.map((order) => (
-                  <article className="profile-activity-card" key={order._id}>
-                    <div className="profile-activity-card-header">
-                      <div>
-                        <span className="profile-activity-label">ORDER NUMBER</span>
-                        <strong>{order.orderNumber || order._id}</strong>
-                      </div>
-                      <span
-                        className={`profile-activity-status ${
-                          String(order.status).toLowerCase() === "completed"
-                            ? "completed"
-                            : "cancelled"
-                        }`}
-                      >
-                        {order.status}
+              <div className="profile-history-list">
+                {purchaseHistory.map((order) => {
+                  const seller =
+                    order.seller && typeof order.seller === "object"
+                      ? order.seller
+                      : null;
+                  const sellerId = seller?._id || seller?.id;
+                  const shopName = seller?.name || seller?.shopName || "ShopEZ Store";
+                  const shopImage = seller?.profileImage || seller?.shopImage;
+                  const shopContent = (
+                    <>
+                      <span className="profile-history-shop-avatar">
+                        {shopImage ? (
+                          <img src={resolveImage(shopImage)} alt="" />
+                        ) : (
+                          <Store size={17} />
+                        )}
                       </span>
-                    </div>
+                      <span>
+                        <small>Purchased from</small>
+                        <strong>{shopName}</strong>
+                      </span>
+                      {sellerId && <ArrowUpRight size={16} />}
+                    </>
+                  );
 
-                    <div className="profile-activity-products">
-                      {(order.items || []).map((item, index) => {
-                        const product =
-                          item.product && typeof item.product === "object"
-                            ? item.product
-                            : {};
-                        const productName =
-                          item.name || product.name || product.title || "Product";
-                        const productImage =
-                          item.image ||
-                          product.image ||
-                          product.images?.[0] ||
-                          "";
+                  return (
+                    <article className="profile-history-card" key={order._id}>
+                      <div className="profile-history-card-top">
+                        <div>
+                          <span className="profile-history-label">ORDER</span>
+                          <strong>{order.orderNumber || order._id}</strong>
+                        </div>
+                        <span
+                          className={`profile-history-status ${
+                            String(order.status).toLowerCase() === "completed"
+                              ? "completed"
+                              : "cancelled"
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
 
-                        return (
-                          <div
-                            className="profile-activity-product"
-                            key={item._id || `${order._id}-${index}`}
-                          >
-                            <div className="profile-activity-image">
-                              {productImage ? (
-                                <img src={productImage} alt={productName} />
-                              ) : (
-                                <Package size={23} />
-                              )}
-                            </div>
-                            <div className="profile-activity-product-info">
-                              <strong>{productName}</strong>
-                              <span>Quantity: {item.quantity || 1}</span>
-                              <span>
-                                Rp {Number(item.price || 0).toLocaleString("id-ID")}
+                      {sellerId ? (
+                        <Link
+                          to={`/shop/${sellerId}`}
+                          className="profile-history-shop"
+                          aria-label={`Visit ${shopName}`}
+                        >
+                          {shopContent}
+                        </Link>
+                      ) : (
+                        <div className="profile-history-shop is-unlinked">
+                          {shopContent}
+                        </div>
+                      )}
+
+                      <div className="profile-history-items">
+                        {(order.items || []).map((item, index) => {
+                          const product =
+                            item.product && typeof item.product === "object"
+                              ? item.product
+                              : {};
+                          const productName =
+                            item.name || product.name || product.title || "Product";
+                          const productImage =
+                            item.image ||
+                            product.image ||
+                            product.images?.[0] ||
+                            "";
+
+                          return (
+                            <div
+                              className="profile-history-item"
+                              key={item._id || `${order._id}-${index}`}
+                            >
+                              <span className="profile-history-item-image">
+                                {productImage ? (
+                                  <img
+                                    src={resolveImage(productImage)}
+                                    alt={productName}
+                                  />
+                                ) : (
+                                  <Package size={19} />
+                                )}
                               </span>
+                              <span className="profile-history-item-info">
+                                <strong>{productName}</strong>
+                                <small>Qty {item.quantity || 1}</small>
+                              </span>
+                              <strong className="profile-history-item-price">
+                                Rp {Number(item.price || 0).toLocaleString("id-ID")}
+                              </strong>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
 
-                    <div className="profile-activity-card-footer">
-                      <div>
-                        <span>Order Date</span>
-                        <strong>{formatDate(order.createdAt) || "-"}</strong>
+                      <div className="profile-history-card-bottom">
+                        <span>
+                          {formatDate(order.createdAt) || "-"}
+                        </span>
+                        <span>
+                          Total{" "}
+                          <strong>
+                            Rp{" "}
+                            {Number(order.total ?? order.totalAmount ?? 0).toLocaleString("id-ID")}
+                          </strong>
+                        </span>
                       </div>
-                      <div className="profile-activity-total">
-                        <span>Total Payment</span>
-                        <strong>
-                          Rp {Number(order.total ?? order.totalAmount ?? 0).toLocaleString("id-ID")}
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1650,6 +1700,13 @@ export default function Profile() {
                     product?.name || product?.title || "Product";
                   const productImage =
                     product?.images?.[0] || product?.image || "";
+                  const seller =
+                    product?.seller && typeof product.seller === "object"
+                      ? product.seller
+                      : null;
+                  const sellerId = seller?._id || seller?.id;
+                  const shopName = seller?.name || seller?.shopName || "ShopEZ Store";
+                  const shopImage = seller?.profileImage || seller?.shopImage;
 
                   return (
                     <article className="profile-review-card" key={review._id}>
@@ -1657,7 +1714,10 @@ export default function Profile() {
                         <div className="profile-review-product">
                           <div className="profile-activity-image profile-review-image">
                             {productImage ? (
-                              <img src={productImage} alt={productName} />
+                              <img
+                                src={resolveImage(productImage)}
+                                alt={productName}
+                              />
                             ) : (
                               <Package size={23} />
                             )}
@@ -1670,6 +1730,27 @@ export default function Profile() {
                           {formatDate(review.createdAt) || "-"}
                         </span>
                       </div>
+
+                      {sellerId && (
+                        <Link
+                          to={`/shop/${sellerId}`}
+                          className="profile-review-shop"
+                          aria-label={`Visit ${shopName}`}
+                        >
+                          <span className="profile-review-shop-avatar">
+                            {shopImage ? (
+                              <img src={resolveImage(shopImage)} alt="" />
+                            ) : (
+                              <Store size={14} />
+                            )}
+                          </span>
+                          <span>
+                            <small>From this shop</small>
+                            <strong>{shopName}</strong>
+                          </span>
+                          <ArrowUpRight size={15} />
+                        </Link>
+                      )}
 
                       <div
                         className="profile-review-rating"

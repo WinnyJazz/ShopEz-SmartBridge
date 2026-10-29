@@ -13,6 +13,7 @@ import Catalogue from "./pages/Catalogue";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import ViewMyShop from "./pages/seller/ViewMyShop";
+import PublicShop from "./pages/PublicShop";
 import AuthExpiryWatcher from "./components/AuthExpiryWatcher";
 import SellerOrders from "./pages/SellerOrders";
 import OrderDetail from "./pages/OrderDetail";
@@ -119,6 +120,15 @@ export default function App() {
           element={
             <MainLayout>
               <ViewMyShop />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/shop/:sellerId"
+          element={
+            <MainLayout>
+              <PublicShop />
             </MainLayout>
           }
         />

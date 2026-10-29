@@ -267,9 +267,12 @@ exports.createOrder = async (req, res) => {
 // GET /api/orders/mine  (pesanan sebagai buyer)
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ buyer: req.user.userId }).sort({
-      createdAt: -1,
-    });
+    const orders = await Order.find({ buyer: req.user.userId })
+      .sort({ createdAt: -1 })
+      .populate(
+        "seller",
+        "name shopName shopDescription shopImage profileImage shopLocation"
+      );
 
     return res.status(200).json({ orders: orders.map(toClientOrder) });
   } catch (error) {
@@ -563,4 +566,3 @@ exports.updateOrderStatus = async (req, res) => {
     return res.status(500).json({ message: "Failed to update order." });
   }
 };
-

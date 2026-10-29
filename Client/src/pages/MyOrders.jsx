@@ -4,7 +4,9 @@ import {
   ArrowRight,
   CheckCircle2,
   LoaderCircle,
+  MapPin,
   Package,
+  Store,
 } from "lucide-react";
 import {
   API_BASE,
@@ -103,13 +105,11 @@ export default function MyOrders({ embedded = false }) {
 
   return (
     <div
-      className={
-        embedded ? "co-page my-orders-embedded" : "co-page"
-      }
+      className={`my-orders-view${embedded ? " my-orders-embedded" : ""}`}
     >
-      <div className="co-container">
+      <div className="my-orders-container">
         {justPlaced && (
-          <div className="co-alert co-alert-success" role="status">
+          <div className="my-orders-alert" role="status">
             <CheckCircle2 size={18} />
             <span>
               {placedCount > 1
@@ -119,104 +119,150 @@ export default function MyOrders({ embedded = false }) {
           </div>
         )}
 
-        <div className="co-heading">
-          <span className="co-eyebrow">YOUR PURCHASES</span>
+        <div className="my-orders-heading">
+          <span className="my-orders-eyebrow">YOUR PURCHASES</span>
           <h1>My Orders</h1>
           <p>Track your orders and payment status.</p>
         </div>
 
         {loading ? (
-          <div className="co-center">
-            <LoaderCircle size={32} className="co-spin" />
+          <div className="my-orders-state" role="status">
+            <LoaderCircle size={28} className="my-orders-spinner" />
             <p>Loading orders...</p>
           </div>
         ) : error ? (
-          <div className="co-card co-empty">
+          <div className="my-orders-state my-orders-error" role="alert">
             <p>{error}</p>
             <button
               type="button"
-              className="co-primary"
+              className="my-orders-primary"
               onClick={loadOrders}
             >
               Try again
             </button>
           </div>
         ) : orders.length === 0 ? (
-          <div className="co-card co-empty">
+          <div className="my-orders-state">
             <Package size={36} />
             <h2>No orders yet</h2>
             <p>When you place an order, it will show up here.</p>
-            <Link to="/catalogue" className="co-primary">
+            <Link to="/catalogue" className="my-orders-primary">
               Explore Products
             </Link>
           </div>
         ) : (
-          <div className="co-orders-list">
+          <div className="my-orders-list">
             {orders.map((order) => {
               const status = statusInfo(order);
+              const items = Array.isArray(order.items) ? order.items : [];
+              const seller =
+                order.seller && typeof order.seller === "object"
+                  ? order.seller
+                  : null;
+              const sellerId = seller?._id || seller?.id;
+              const shopName = seller?.name || seller?.shopName || "ShopEZ Store";
+              const shopImage = seller?.profileImage || seller?.shopImage;
+              const shopContent = (
+                <>
+                  <span className="my-orders-shop-avatar">
+                    {shopImage ? (
+                      <img src={resolveImage(shopImage)} alt="" />
+                    ) : (
+                      <Store size={18} />
+                    )}
+                  </span>
+                  <span className="my-orders-shop-info">
+                    <small>Sold by</small>
+                    <strong>{shopName}</strong>
+                    {seller?.shopLocation && (
+                      <small className="my-orders-shop-location">
+                        <MapPin size={12} />
+                        {seller.shopLocation}
+                      </small>
+                    )}
+                  </span>
+                  {sellerId && <ArrowRight size={16} className="my-orders-shop-arrow" />}
+                </>
+              );
 
               return (
-                <Link
-                  to={`/orders/${order._id}`}
-                  className="co-card co-order-card"
-                  key={order._id}
-                >
-                  <div className="co-order-top">
-                    <div>
+                <article className="my-orders-card" key={order._id}>
+                  <div className="my-orders-card-top">
+                    <div className="my-orders-reference">
                       <strong>{order.orderNumber}</strong>
                       <small>{formatDate(order.createdAt)}</small>
                     </div>
 
                     <span
-                      className={`co-pill co-pill-${status.className}`}
+                      className={`my-orders-status my-orders-status-${status.className}`}
                     >
                       {status.label}
                     </span>
                   </div>
 
-                  <div className="co-order-thumbs">
-                    {order.items.slice(0, 4).map((item, index) => (
+                  {sellerId ? (
+                    <Link
+                      to={`/shop/${sellerId}`}
+                      className="my-orders-shop-link"
+                      aria-label={`Visit ${shopName}`}
+                    >
+                      {shopContent}
+                    </Link>
+                  ) : (
+                    <div className="my-orders-shop-link is-unlinked">
+                      {shopContent}
+                    </div>
+                  )}
+
+                  <div className="my-orders-items">
+                    {items.slice(0, 3).map((item, index) => (
                       <div
-                        className="co-thumb"
+                        className="my-orders-item"
                         key={`${item.product || item.name}-${index}`}
                       >
-                        {item.image && (
-                          <img
-                            src={resolveImage(item.image)}
-                            alt={item.name || "Product"}
-                          />
-                        )}
+                        <span className="my-orders-item-image">
+                          {item.image ? (
+                            <img
+                              src={resolveImage(item.image)}
+                              alt={item.name || "Product"}
+                            />
+                          ) : (
+                            <Package size={18} />
+                          )}
+                        </span>
+                        <span className="my-orders-item-name">
+                          <strong>{item.name || "Product"}</strong>
+                          <small>Qty {item.quantity || 1}</small>
+                        </span>
+                        <strong className="my-orders-item-price">
+                          {formatPrice(item.price)}
+                        </strong>
                       </div>
                     ))}
-
-                    {order.items.length > 4 && (
-                      <span className="co-thumb-more">
-                        +{order.items.length - 4}
+                    {items.length > 3 && (
+                      <span className="my-orders-more-items">
+                        +{items.length - 3} more{" "}
+                        {items.length - 3 === 1 ? "item" : "items"}
                       </span>
                     )}
-
-                    <span className="co-order-names">
-                      {order.items[0]?.name}
-                      {order.items.length > 1
-                        ? ` and ${order.items.length - 1} more`
-                        : ""}
-                    </span>
                   </div>
 
-                  <div className="co-order-bottom">
+                  <div className="my-orders-card-bottom">
                     <span>
-                      Total <strong>{formatPrice(order.total)}</strong>
+                      Total payment <strong>{formatPrice(order.total)}</strong>
                     </span>
-
-                    <span className="co-order-link">
+                    <Link
+                      to={`/orders/${order._id}`}
+                      className="my-orders-details-link"
+                    >
                       {order.status === "pending_payment" &&
                       order.paymentStatus === "unpaid"
                         ? "Pay now"
-                        : "View details"}
+                        : "Order details"}
                       <ArrowRight size={15} />
-                    </span>
+                    </Link>
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>
