@@ -6,7 +6,11 @@ const {
   loginUser,
   getSession,
 } = require("../controllers/authController");
-const { updateMyProfileImage } = require("../controllers/profileController");
+const {
+  updateMyProfileImage,
+  updateMyEmail,
+  updateMyPassword,
+} = require("../controllers/profileController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -23,5 +27,7 @@ router.get("/me", authMiddleware, (req, res) => {
 
 router.get("/session", authMiddleware, getSession);
 router.put("/profile-image", authMiddleware, updateMyProfileImage);
+router.put("/email", authMiddleware, updateMyEmail);
+router.put("/password", authMiddleware, updateMyPassword);
 
 module.exports = router;

@@ -17,11 +17,7 @@ import {
   ChevronRight,
 
   Mail,
-
   ShieldCheck,
-
-  ShoppingBag,
-
   ArrowUpRight,
 
   Store,
@@ -174,7 +170,18 @@ export default function Profile() {
   }, [location.state]);
 
   const [user, setUser] = useState(readStoredUser);
-
+  const [newEmail, setNewEmail] = useState(() => readStoredUser()?.email || "");
+  const [confirmingEmailChange, setConfirmingEmailChange] = useState(false);
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [passwordCurrentPassword, setPasswordCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
   const [shopProfile, setShopProfile] = useState({
 
     shopName: "",
@@ -609,6 +616,109 @@ export default function Profile() {
 
     }
 
+  }
+
+  function beginEmailChange(event) {
+    event.preventDefault();
+    setEmailError("");
+    setEmailMessage("");
+
+    const email = newEmail.trim().toLowerCase();
+    if (!email) {
+      setEmailError("Enter your new email address.");
+      return;
+    }
+
+    setNewEmail(email);
+    setConfirmingEmailChange(true);
+  }
+
+  async function handleEmailChange(event) {
+    event.preventDefault();
+    setEmailError("");
+    setEmailMessage("");
+
+    const email = newEmail.trim().toLowerCase();
+    if (!email || !emailCurrentPassword) {
+      setEmailError("Enter your new email and current password.");
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/email`, {
+        method: "PUT",
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, currentPassword: emailCurrentPassword }),
+      });
+      const data = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not update email address.");
+      }
+
+      const updatedUser = { ...readStoredUser(), ...(data.user || {}), email };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setNewEmail(email);
+      setEmailCurrentPassword("");
+      setConfirmingEmailChange(false);
+      setEmailMessage(data.message || "Email address updated successfully.");
+      window.dispatchEvent(new Event("authChanged"));
+    } catch (error) {
+      setEmailError(error.message || "Could not update email address.");
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  async function handlePasswordChange(event) {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordMessage("");
+
+    if (!passwordCurrentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError("Complete all password fields.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/password`, {
+        method: "PUT",
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword: passwordCurrentPassword,
+          newPassword,
+          confirmPassword: confirmNewPassword,
+        }),
+      });
+      const data = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not update password.");
+      }
+
+      setPasswordCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setPasswordMessage(data.message || "Password updated successfully.");
+    } catch (error) {
+      setPasswordError(error.message || "Could not update password.");
+    } finally {
+      setSavingPassword(false);
+    }
   }
 
   function handleLogout() {
@@ -1803,64 +1913,158 @@ export default function Profile() {
             </div>
 
             <div className="profile-setting-card">
-
               <div className="profile-setting-icon">
-
                 <Mail size={21} />
-
               </div>
-
               <div className="profile-setting-info">
-
                 <h3>Email Address</h3>
-
-                <p>{user?.email || "No email available"}</p>
-
-                <span>Email changes are not available yet.</span>
-
+                <p>Current email: {user?.email || "No email available"}</p>
+                <form
+                  className="profile-setting-form"
+                  onSubmit={
+                    confirmingEmailChange
+                      ? handleEmailChange
+                      : beginEmailChange
+                  }
+                >
+                  {confirmingEmailChange ? (
+                    <>
+                      <p className="profile-setting-confirmation">
+                        New email: <strong>{newEmail}</strong>
+                      </p>
+                      <label>
+                        Enter your current password to continue
+                        <input
+                          type="password"
+                          value={emailCurrentPassword}
+                          onChange={(event) =>
+                            setEmailCurrentPassword(event.target.value)
+                          }
+                          autoComplete="current-password"
+                          required
+                          autoFocus
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <label>
+                      New email address
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(event) => setNewEmail(event.target.value)}
+                        autoComplete="email"
+                        required
+                      />
+                    </label>
+                  )}
+                  {emailError && (
+                    <p className="profile-setting-feedback error" role="alert">
+                      {emailError}
+                    </p>
+                  )}
+                  {emailMessage && (
+                    <p className="profile-setting-feedback success" role="status">
+                      {emailMessage}
+                    </p>
+                  )}
+                  <div className="profile-setting-actions">
+                    <button
+                      type="submit"
+                      className="profile-primary-button"
+                      disabled={savingEmail}
+                    >
+                      {confirmingEmailChange
+                        ? savingEmail
+                          ? "Updating..."
+                          : "Confirm Email Change"
+                        : "Update Email"}
+                    </button>
+                    {confirmingEmailChange && (
+                      <button
+                        type="button"
+                        className="profile-secondary-button"
+                        disabled={savingEmail}
+                        onClick={() => {
+                          setConfirmingEmailChange(false);
+                          setEmailCurrentPassword("");
+                          setEmailError("");
+                        }}
+                      >
+                        Back
+                      </button>
+                    )}
+                  </div>
+                </form>
               </div>
-
             </div>
 
             <div className="profile-setting-card">
-
               <div className="profile-setting-icon">
-
                 <ShieldCheck size={21} />
-
               </div>
-
               <div className="profile-setting-info">
-
                 <h3>Password & Security</h3>
-
-                <p>Keep your account secure.</p>
-
-                <span>
-
-                  Password changes will be available when connected to the
-
-                  backend.
-
-                </span>
-
+                <p>Choose a password with at least 8 characters.</p>
+                <form
+                  className="profile-setting-form"
+                  onSubmit={handlePasswordChange}
+                >
+                  <label>
+                    Current password
+                    <input
+                      type="password"
+                      value={passwordCurrentPassword}
+                      onChange={(event) =>
+                        setPasswordCurrentPassword(event.target.value)
+                      }
+                      autoComplete="current-password"
+                      required
+                    />
+                  </label>
+                  <label>
+                    New password
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Confirm new password
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(event) =>
+                        setConfirmNewPassword(event.target.value)
+                      }
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+                  {passwordError && (
+                    <p className="profile-setting-feedback error" role="alert">
+                      {passwordError}
+                    </p>
+                  )}
+                  {passwordMessage && (
+                    <p className="profile-setting-feedback success" role="status">
+                      {passwordMessage}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    className="profile-primary-button"
+                    disabled={savingPassword}
+                  >
+                    {savingPassword ? "Updating..." : "Update Password"}
+                  </button>
+                </form>
               </div>
-
-            </div>
-
-            <div className="profile-setting-card">
-              <div className="profile-setting-icon">
-                <ShoppingBag size={21} />
-
-              </div>
-
-              <div className="profile-setting-info">
-                <h3>Shopping Preferences</h3>
-                <p>Personalize your shopping experience.</p>
-                <span>More preferences will be available in a future update.</span>
-
-              </div>
-
             </div>
 
           </>
