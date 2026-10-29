@@ -15,12 +15,15 @@ import {
   ChevronRight,
   LoaderCircle,
   MessageSquare,
+  MapPin,
+  Store,
 } from "lucide-react";
 import {
   API_BASE,
   PRODUCTS_API,
   formatPrice,
   normalizeProduct,
+  resolveImage,
 } from "../utils/productHelpers";
 import "./ProductDetails.css";
 
@@ -312,27 +315,6 @@ export default function ProductDetails() {
           <p className="details-category">{product.category}</p>
           <h1>{product.name}</h1>
 
-          <div className="details-rating">
-            <span className="details-star">
-              <Star size={15} fill="currentColor" />
-            </span>
-            <strong>
-              {reviewCount > 0 ? averageRating.toFixed(1) : "New"}
-            </strong>
-            <span>
-              ({reviewCount.toLocaleString()}{" "}
-              {reviewCount === 1 ? "review" : "reviews"})
-            </span>
-            {reviewCount > 0 && (
-              <>
-                <span className="rating-divider">|</span>
-                <span className="verified-rating">
-                  <Check size={13} /> Customer ratings
-                </span>
-              </>
-            )}
-          </div>
-
           <div className="details-price-row">
             <span className="details-price">{formatPrice(product.price)}</span>
             {product.discount > 0 && (
@@ -434,6 +416,56 @@ export default function ProductDetails() {
         <h2>Designed for your everyday.</h2>
         <p className="details-long-description">{product.description}</p>
       </section>
+
+      {product.sellerId && (
+        <section className="details-shop-section" aria-label="Shop information">
+          <Link
+            to={`/shop/${product.sellerId}`}
+            className="details-seller-card"
+            aria-label={`Visit ${product.shopName || "shop"}`}
+          >
+            <span className="details-seller-avatar">
+              {product.sellerShopImage ? (
+                <img src={resolveImage(product.sellerShopImage)} alt="" />
+              ) : (
+                <Store size={20} />
+              )}
+            </span>
+            <span className="details-seller-info">
+              <small>SHOP</small>
+              <strong>
+                {product.shopName || product.sellerName || "ShopEZ Seller"}
+              </strong>
+              {product.location && (
+                <small className="details-seller-location">
+                  <MapPin size={12} />
+                  {product.location}
+                </small>
+              )}
+            </span>
+            <ChevronRight size={18} className="details-seller-arrow" />
+          </Link>
+        </section>
+      )}
+
+      <div className="details-rating">
+        <span className="details-star">
+          <Star size={15} fill="currentColor" />
+        </span>
+        <strong>{reviewCount > 0 ? averageRating.toFixed(1) : "New"}</strong>
+        <span>
+          ({reviewCount.toLocaleString()}{" "}
+          {reviewCount === 1 ? "review" : "reviews"})
+        </span>
+        {reviewCount > 0 && (
+          <>
+            <span className="rating-divider">|</span>
+            <span className="verified-rating">
+              <Check size={13} /> Customer ratings
+            </span>
+          </>
+        )}
+      </div>
 
       {/* CUSTOMER REVIEWS */}
       <section className="details-reviews-section" id="reviews">

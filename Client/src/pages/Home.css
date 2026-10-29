@@ -88,6 +88,7 @@
 
 .hero-copy h1 {
   margin: 0;
+  color: #1f2937;
   font-family: "Fraunces", Georgia, serif;
   font-size: clamp(38px, 4vw, 61px);
   line-height: 0.99;
@@ -98,7 +99,7 @@
 .hero-copy h1 span {
   display: block;
   margin-top: 4px;
-  color: #648be2;
+  color: #31558e;
 }
 
 .hero-description {
@@ -242,11 +243,12 @@
   margin-bottom: 6px;
   font-size: 9px;
   letter-spacing: 1.8px;
-  color: #8a93a3;
+  color: #59677d;
 }
 
 .section-heading h2 {
   margin: 0;
+  color: #1f2937;
   font-size: clamp(21px, 2vw, 25px);
   font-weight: 800;
   letter-spacing: -0.9px;
@@ -607,6 +609,7 @@
 
 .home-promo h2 {
   margin: 0 0 4px;
+  color: #1f2937;
   font-family: "Fraunces", Georgia, serif;
   font-size: 22px;
 }

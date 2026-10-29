@@ -81,7 +81,7 @@ export default function PublicShop() {
     window.setTimeout(() => setAddedProductId(""), 1800);
   }
 
-  const shopImage = shop?.profileImage || shop?.shopImage;
+  const shopImage = shop?.shopImage || shop?.profileImage;
 
   return (
     <main className="public-shop-page">

@@ -6,7 +6,7 @@ const Product = require("../models/Product");
 const Favorite = require("../models/Favorite");
 
 // Field toko yang ikut dikirim bersama produk.
-const SELLER_FIELDS = "name shopName shopLocation";
+const SELLER_FIELDS = "name profileImage shopImage shopName shopLocation";
 
 const MAX_IMAGES = 8;
 
