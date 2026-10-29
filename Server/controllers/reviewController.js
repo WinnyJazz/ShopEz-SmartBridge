@@ -160,7 +160,39 @@ const createOrUpdateReview = async (req, res) => {
   }
 };
 
+// GET: Ambil semua review milik user yang sedang login
+const getMyReviews = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(401).json({
+        message: "A valid user session is required.",
+      });
+    }
+
+    const reviews = await Review.find({ buyer: userId })
+      .populate({
+        path: "product",
+        select: "name title price images image category",
+      })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      reviews,
+      totalReviews: reviews.length,
+    });
+  } catch (error) {
+    console.error("Get my reviews error:", error.message);
+
+    return res.status(500).json({
+      message: "Failed to load your reviews.",
+    });
+  }
+};
+
 module.exports = {
   getProductReviews,
   createOrUpdateReview,
+  getMyReviews,
 };
