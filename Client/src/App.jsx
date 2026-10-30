@@ -5,6 +5,7 @@ import Footer from "./components/Footer";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import SignUp from "./pages/SignUp";
 import ShoppingCart from "./pages/ShoppingCart";
 import Checkout from "./pages/Checkout";
@@ -48,6 +49,15 @@ export default function App() {
           element={
             <MainLayout>
               <Login />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/reset-password"
+          element={
+            <MainLayout>
+              <ResetPassword />
             </MainLayout>
           }
         />

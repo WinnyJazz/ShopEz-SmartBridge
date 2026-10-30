@@ -101,21 +101,43 @@ export default function ShoppingCart() {
   const isAvailable = (item) => !item.unavailable && item.stock > 0;
 
   const availableItems = cartItems.filter(isAvailable);
+  const selectedItems = availableItems.filter(
+    (item) => item.selectedForCheckout !== false
+  );
+  const allAvailableSelected =
+    availableItems.length > 0 &&
+    selectedItems.length === availableItems.length;
 
-  const subtotal = availableItems.reduce(
+  const subtotal = selectedItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const originalTotal = availableItems.reduce(
+  const originalTotal = selectedItems.reduce(
     (sum, item) => sum + item.originalPrice * item.quantity,
     0
   );
 
   const discount = originalTotal - subtotal;
-  const shipping =
-    subtotal === 0 || subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
-  const promoDiscount = promoApplied ? Math.round(subtotal * 0.1) : 0;
+  const selectedShopTotals = new Map();
+  for (const item of selectedItems) {
+    const key = item.sellerId || item.shopName || "unknown";
+    selectedShopTotals.set(
+      key,
+      (selectedShopTotals.get(key) || 0) + item.price * item.quantity
+    );
+  }
+  const shipping = [...selectedShopTotals.values()].reduce(
+    (sum, shopSubtotal) =>
+      sum + (shopSubtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE),
+    0
+  );
+  const promoDiscount = promoApplied
+    ? [...selectedShopTotals.values()].reduce(
+        (sum, shopSubtotal) => sum + Math.round(shopSubtotal * 0.1),
+        0
+      )
+    : 0;
   const total = subtotal + shipping - promoDiscount;
 
   const updateQuantity = (id, amount) => {
@@ -136,6 +158,28 @@ export default function ShoppingCart() {
 
   const removeItem = (id) => {
     commit(cartItems.filter((item) => item.id !== id));
+  };
+
+  const toggleItemSelection = (id) => {
+    commit(
+      cartItems.map((item) =>
+        item.id === id
+          ? { ...item, selectedForCheckout: item.selectedForCheckout === false }
+          : item
+      )
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const nextSelected = !allAvailableSelected;
+    const availableIds = new Set(availableItems.map((item) => item.id));
+    commit(
+      cartItems.map((item) =>
+        availableIds.has(item.id)
+          ? { ...item, selectedForCheckout: nextSelected }
+          : item
+      )
+    );
   };
 
   const applyPromo = () => {
@@ -203,6 +247,21 @@ export default function ShoppingCart() {
               </span>
             </div>
 
+            <div className="cart-selection-toolbar">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={allAvailableSelected}
+                  onChange={toggleSelectAll}
+                  disabled={availableItems.length === 0}
+                />
+                <span>Select all available items</span>
+              </label>
+              <span>
+                {selectedItems.length} of {availableItems.length} selected
+              </span>
+            </div>
+
             <div className="cart-items-list">
               {cartItems.map((item) => {
                 const available = isAvailable(item);
@@ -211,9 +270,25 @@ export default function ShoppingCart() {
                   <article
                     className={`cart-item ${
                       available ? "" : "cart-item-unavailable"
+                    } ${
+                      item.selectedForCheckout === false
+                        ? "cart-item-unselected"
+                        : ""
                     }`}
                     key={item.id}
                   >
+                    <label className="cart-item-select">
+                      <input
+                        type="checkbox"
+                        checked={
+                          available && item.selectedForCheckout !== false
+                        }
+                        onChange={() => toggleItemSelection(item.id)}
+                        disabled={!available}
+                        aria-label={`Select ${item.name} for checkout`}
+                      />
+                    </label>
+
                     <Link
                       to={`/product/${item.id}`}
                       className="cart-item-image"
@@ -314,7 +389,7 @@ export default function ShoppingCart() {
           <aside className="order-summary">
             <div className="summary-heading">
               <h2>Order Summary</h2>
-              <span>ESTIMATE</span>
+              <span>{selectedItems.length} SELECTED</span>
             </div>
 
             <div className="summary-line">
@@ -379,21 +454,29 @@ export default function ShoppingCart() {
               <strong>{formatPrice(total)}</strong>
             </div>
 
+            {selectedItems.length === 0 && (
+              <p className="cart-selection-hint" role="status">
+                Select at least one available product to continue.
+              </p>
+            )}
+
             <button
               type="button"
               className="checkout-button"
-              disabled={availableItems.length === 0 || syncing}
+              disabled={selectedItems.length === 0 || syncing}
               onClick={() =>
                 navigate("/checkout", {
                   state: {
                     promoCode: promoApplied
                       ? promoCode.trim().toUpperCase()
                       : "",
+                    selectedItemIds: selectedItems.map((item) => item.id),
                   },
                 })
               }
             >
-              Proceed to Checkout <ArrowRight size={18} />
+              Checkout {selectedItems.length} selected{" "}
+              <ArrowRight size={18} />
             </button>
 
             <p className="checkout-note">

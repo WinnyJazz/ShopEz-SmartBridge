@@ -29,6 +29,10 @@ router.put("/payment", authMiddleware, updateMyPaymentSettings);
 router.get("/application/me", authMiddleware, getMyApplication);
 router.post("/apply", authMiddleware, uploadIdentityPhoto, applyForSeller);
 
+router.get("/test", (req, res) => {
+  res.json({ success: true, message: "Shop route works!" });
+});
+
 // Public shop page; keep after static shop routes.
 router.get("/:sellerId", getPublicShop);
 

@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Heart,
   ShoppingBag,
   User,
   LogOut,
   Settings,
-  ChevronRight,
   Store,
   ClipboardList,
 } from "lucide-react";
@@ -15,6 +14,7 @@ import "./Navbar.css";
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(() => {
     try {
@@ -44,6 +44,16 @@ function Navbar() {
     };
   }, []);
 
+  function handleSearch(event) {
+    event.preventDefault();
+    const query = String(
+      new FormData(event.currentTarget).get("search") || ""
+    ).trim();
+    navigate(
+      query ? `/catalogue?search=${encodeURIComponent(query)}` : "/catalogue"
+    );
+  }
+
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -63,13 +73,16 @@ function Navbar() {
         ShopEZ
       </Link>
 
-      <div className="navbar-search">
+      <form className="navbar-search" onSubmit={handleSearch}>
         <input
+          key={location.search}
+          name="search"
           type="text"
-          placeholder="Search products..."
+          defaultValue={new URLSearchParams(location.search).get("search") || ""}
+          placeholder="Search products and shops..."
           aria-label="Search products"
         />
-      </div>
+      </form>
 
       <div className="navbar-actions">
         <Link

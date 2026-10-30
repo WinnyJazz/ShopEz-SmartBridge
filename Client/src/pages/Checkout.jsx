@@ -43,10 +43,18 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const promoCode = location.state?.promoCode || "";
+  const selectedItemIds = location.state?.selectedItemIds;
 
-  // Hanya produk yang masih tersedia
+  // Only the cart items selected for checkout are ordered.
   const [items] = useState(() =>
-    getCart().filter((item) => !item.unavailable && item.stock > 0)
+    getCart().filter(
+      (item) =>
+        !item.unavailable &&
+        item.stock > 0 &&
+        (Array.isArray(selectedItemIds)
+          ? selectedItemIds.includes(item.id)
+          : item.selectedForCheckout !== false)
+    )
   );
 
   const [form, setForm] = useState(() => ({

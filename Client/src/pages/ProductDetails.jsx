@@ -387,7 +387,11 @@ export default function ProductDetails() {
               <Truck size={20} />
               <div>
                 <strong>Shipping Information</strong>
-                <p>Shipping options shown at checkout.</p>
+                <p>
+                  Seller estimate: ships in {product.shippingEstimateDays}{" "}
+                  {product.shippingEstimateDays === 1 ? "day" : "days"}.
+                  Delivery time may vary by destination.
+                </p>
               </div>
             </div>
 

@@ -24,10 +24,13 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -62,6 +65,39 @@ export default function Login() {
 
       // Balik ke halaman sebelum sesi habis
       navigate(redirectTo, { replace: true });
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, recoveryEmail }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to request a password reset.");
+      }
+
+      setNotice(data.message);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Something went wrong."
@@ -138,9 +174,17 @@ export default function Login() {
         <div className="auth-form-side">
           <div className="auth-form-card">
             <div className="auth-form-heading">
-              <span className="auth-form-kicker">WELCOME BACK</span>
-              <h2>Log in to ShopEZ</h2>
-              <p>Continue where you left off.</p>
+              <span className="auth-form-kicker">
+                {forgotPassword ? "PASSWORD HELP" : "WELCOME BACK"}
+              </span>
+              <h2>
+                {forgotPassword ? "Reset your password" : "Log in to ShopEZ"}
+              </h2>
+              <p>
+                {forgotPassword
+                  ? "We will send a secure reset link to your email."
+                  : "Continue where you left off."}
+              </p>
               {sessionExpired && (
                 <p className="auth-notice" role="status">
                   Sesi kamu sudah habis. Silakan log in lagi.
@@ -148,6 +192,72 @@ export default function Login() {
               )}
             </div>
 
+            {forgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="auth-form">
+                {error && (
+                  <p className="auth-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                {notice && (
+                  <p className="auth-success" role="status">
+                    {notice}
+                  </p>
+                )}
+                <p className="auth-form-description">
+                  Enter the email on your ShopEZ account and the real email
+                  address where you want to receive the reset link.
+                </p>
+                <div className="auth-field">
+                  <label htmlFor="reset-email">ShopEZ account email</label>
+                  <div className="auth-input">
+                    <Mail size={18} />
+                    <input
+                      id="reset-email"
+                      type="email"
+                      placeholder="fake-account@example.com"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="recovery-email">Email to receive the link</label>
+                  <div className="auth-input">
+                    <Mail size={18} />
+                    <input
+                      id="recovery-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={recoveryEmail}
+                      onChange={(event) => setRecoveryEmail(event.target.value)}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="auth-primary-button"
+                  disabled={loading}
+                >
+                  {loading ? "Sending..." : "Send reset link"}
+                </button>
+                <button
+                  type="button"
+                  className="auth-link-button auth-back-button"
+                  onClick={() => {
+                    setForgotPassword(false);
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  Back to log in
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="auth-form">
               {error && (
                 <p className="auth-error" role="alert">
@@ -207,7 +317,11 @@ export default function Login() {
                 <button
                   type="button"
                   className="auth-link-button"
-                  onClick={() => alert("Fitur reset password belum tersedia.")}
+                  onClick={() => {
+                    setForgotPassword(true);
+                    setError("");
+                    setNotice("");
+                  }}
                 >
                   Forgot password?
                 </button>
@@ -222,12 +336,13 @@ export default function Login() {
                 {!loading && <ArrowRight size={17} />}
               </button>
             </form>
+            )}
 
-            <div className="auth-divider">
+            {!forgotPassword && <div className="auth-divider">
               <span>or continue with</span>
-            </div>
+            </div>}
 
-            <div className="auth-social-row">
+            {!forgotPassword && <div className="auth-social-row">
               <button
                 type="button"
                 className="auth-social-button"
@@ -254,11 +369,11 @@ export default function Login() {
               >
                 <Mail size={17} />
               </button>
-            </div>
+            </div>}
 
-            <p className="auth-switch">
+            {!forgotPassword && <p className="auth-switch">
               Don't have an account? <Link to="/signup">Sign Up</Link>
-            </p>
+            </p>}
           </div>
         </div>
       </section>

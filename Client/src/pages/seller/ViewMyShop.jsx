@@ -42,6 +42,7 @@ const emptyForm = {
   price: "",
   category: "",
   stock: "0",
+  shippingEstimateDays: "3",
   discountPercentage: "0",
 };
 
@@ -194,6 +195,7 @@ function ViewMyShop() {
         ? product.category[0] || ""
         : product.category || "",
       stock: String(product.stock ?? 0),
+      shippingEstimateDays: String(product.shippingEstimateDays ?? 3),
       discountPercentage: String(product.discountPercentage ?? 0),
     });
 
@@ -308,6 +310,7 @@ function ViewMyShop() {
       price: Number(form.price),
       category: form.category.trim(),
       stock: Number(form.stock),
+      shippingEstimateDays: Number(form.shippingEstimateDays),
       discountPercentage: Number(form.discountPercentage || 0),
     };
 
@@ -328,6 +331,15 @@ function ViewMyShop() {
 
     if (!Number.isInteger(payload.stock) || payload.stock < 0) {
       setError("Stock must be a whole number of 0 or more.");
+      return;
+    }
+
+    if (
+      !Number.isInteger(payload.shippingEstimateDays) ||
+      payload.shippingEstimateDays < 1 ||
+      payload.shippingEstimateDays > 30
+    ) {
+      setError("Estimated shipping time must be between 1 and 30 days.");
       return;
     }
 
@@ -354,6 +366,10 @@ function ViewMyShop() {
       formData.append("price", String(payload.price));
       formData.append("category", payload.category);
       formData.append("stock", String(payload.stock));
+      formData.append(
+        "shippingEstimateDays",
+        String(payload.shippingEstimateDays)
+      );
       formData.append("discountPercentage", String(payload.discountPercentage));
 
       if (isEditing && removedImages.length > 0) {
@@ -1079,18 +1095,37 @@ function ViewMyShop() {
                   </select>
                 </label>
                 <label>
-                  Discount (%)
+                  Estimated shipping time (days) *
                   <input
-                    name="discountPercentage"
+                    name="shippingEstimateDays"
                     type="number"
-                    min="0"
-                    max="100"
+                    min="1"
+                    max="30"
                     step="1"
-                    value={form.discountPercentage}
+                    value={form.shippingEstimateDays}
                     onChange={handleChange}
+                    required
                   />
                 </label>
               </div>
+
+              <span className="shop-stat-note">
+                Seller estimate for this product. Actual delivery time may vary
+                by destination.
+              </span>
+
+              <label>
+                Discount (%)
+                <input
+                  name="discountPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={form.discountPercentage}
+                  onChange={handleChange}
+                />
+              </label>
 
               <label>
                 Product Images *

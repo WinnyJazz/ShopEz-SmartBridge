@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const {
+  requestPasswordReset,
+  resetPassword,
   registerUser,
   loginUser,
   getSession,
@@ -16,6 +18,8 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/forgot-password", requestPasswordReset);
+router.post("/reset-password", resetPassword);
 
 // Protected routes
 router.get("/me", authMiddleware, (req, res) => {

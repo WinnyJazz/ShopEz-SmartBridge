@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -20,9 +20,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/orders", orderRoutes);
-app.get("/api/shop/test", (req, res) => {
-  res.json({ success: true, message: "Shop route works!" });
-});
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/favorites", require("./routes/favoriteRoutes"));

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   SlidersHorizontal,
@@ -10,6 +10,8 @@ import {
   PackageSearch,
   ArrowRight,
   LoaderCircle,
+  Store,
+  Truck,
 } from "lucide-react";
 
 import FilterSidebar from "../components/FilterSidebar";
@@ -18,6 +20,7 @@ import {
   PRODUCTS_API,
   formatPrice,
   normalizeProduct,
+  resolveImage,
 } from "../utils/productHelpers";
 import "./Catalogue.css";
 
@@ -96,6 +99,12 @@ function ProductCard({ product, isWishlisted, onToggleWishlist }) {
           )}
         </div>
 
+        <p className="catalogue-product-shipping">
+          <Truck size={13} />
+          Estimated shipping: {product.shippingEstimateDays}{" "}
+          {product.shippingEstimateDays === 1 ? "day" : "days"}
+        </p>
+
         {!product.inStock && (
           <p className="catalogue-product-category">Out of stock</p>
         )}
@@ -106,6 +115,7 @@ function ProductCard({ product, isWishlisted, onToggleWishlist }) {
 
 export default function Catalogue() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [products, setProducts] = useState([]);
@@ -114,8 +124,18 @@ export default function Catalogue() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState(defaultFilters);
-  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("featured");
+  const search = searchParams.get("search") || "";
+
+  function updateSearch(value) {
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set("search", value);
+    } else {
+      nextParams.delete("search");
+    }
+    setSearchParams(nextParams, { replace: true });
+  }
 
   async function loadProducts() {
     setLoading(true);
@@ -153,7 +173,8 @@ export default function Catalogue() {
       const matchesSearch =
         !query ||
         product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query);
+        product.description.toLowerCase().includes(query) ||
+        product.shopName.toLowerCase().includes(query);
 
       const minPrice =
         filters.minPrice === "" ? 0 : Number(filters.minPrice);
@@ -230,9 +251,32 @@ export default function Catalogue() {
     return result;
   }, [products, filters, search, sortBy]);
 
+  const matchingShops = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return [];
+
+    const shopsBySellerId = new Map();
+    products.forEach((product) => {
+      if (
+        product.sellerId &&
+        product.shopName.toLowerCase().includes(query) &&
+        !shopsBySellerId.has(product.sellerId)
+      ) {
+        shopsBySellerId.set(product.sellerId, {
+          id: product.sellerId,
+          name: product.shopName,
+          image: product.sellerShopImage,
+          location: product.location,
+        });
+      }
+    });
+
+    return [...shopsBySellerId.values()];
+  }, [products, search]);
+
   const resetFilters = () => {
     setFilters(defaultFilters);
-    setSearch("");
+    updateSearch("");
     setSortBy("featured");
   };
 
@@ -291,12 +335,12 @@ export default function Catalogue() {
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search products, categories..."
-            aria-label="Search products"
+            onChange={(event) => updateSearch(event.target.value)}
+            placeholder="Search product name, description, or shop..."
+            aria-label="Search products and shops"
           />
           {search && (
-            <button onClick={() => setSearch("")} aria-label="Clear search">
+            <button onClick={() => updateSearch("")} aria-label="Clear search">
               <X size={16} />
             </button>
           )}
@@ -353,30 +397,65 @@ export default function Catalogue() {
             <p>{error}</p>
             <button onClick={loadProducts}>Try again</button>
           </div>
-        ) : filteredProducts.length > 0 ? (
-          <div className="catalogue-product-grid">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                isWishlisted={isFavorite(product.id)}
-                onToggleWishlist={toggleWishlist}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="catalogue-empty">
-            <PackageSearch size={42} strokeWidth={1.3} />
-            <h3>No products found</h3>
-            <p>
-              {products.length === 0
-                ? "No products have been listed yet."
-                : "Try changing your search or adjusting your filters."}
-            </p>
-            {products.length > 0 && (
-              <button onClick={resetFilters}>Reset Filters</button>
+          <>
+            {matchingShops.length > 0 && (
+              <section className="catalogue-shop-results" aria-label="Matching shops">
+                <div className="catalogue-shop-results-heading">
+                  <Store size={18} />
+                  <h3>Matching Shops</h3>
+                </div>
+                <div className="catalogue-shop-grid">
+                  {matchingShops.map((shop) => (
+                    <Link
+                      key={shop.id}
+                      to={`/shop/${shop.id}`}
+                      className="catalogue-shop-card"
+                    >
+                      <span className="catalogue-shop-avatar">
+                        {shop.image ? (
+                          <img src={resolveImage(shop.image)} alt="" />
+                        ) : (
+                          <Store size={21} />
+                        )}
+                      </span>
+                      <span className="catalogue-shop-info">
+                        <strong>{shop.name}</strong>
+                        {shop.location && <small>{shop.location}</small>}
+                      </span>
+                      <ArrowRight size={17} className="catalogue-shop-arrow" />
+                    </Link>
+                  ))}
+                </div>
+              </section>
             )}
-          </div>
+
+            {filteredProducts.length > 0 ? (
+              <div className="catalogue-product-grid">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isWishlisted={isFavorite(product.id)}
+                    onToggleWishlist={toggleWishlist}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="catalogue-empty">
+                <PackageSearch size={42} strokeWidth={1.3} />
+                <h3>No products found</h3>
+                <p>
+                  {products.length === 0
+                    ? "No products have been listed yet."
+                    : "Try changing your search or adjusting your filters."}
+                </p>
+                {products.length > 0 && (
+                  <button onClick={resetFilters}>Reset Filters</button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </section>
 

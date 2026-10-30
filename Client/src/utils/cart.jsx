@@ -43,6 +43,7 @@ export function addToCart(product, quantity = 1) {
         ? {
             ...item,
             stock: product.stock,
+            selectedForCheckout: true,
             quantity: Math.min(item.quantity + quantity, maxQty),
           }
         : item
@@ -62,6 +63,7 @@ export function addToCart(product, quantity = 1) {
         location: product.location,
         quantity: Math.min(quantity, maxQty),
         sellerId: product.sellerId,
+        selectedForCheckout: true,
       },
     ];
   }

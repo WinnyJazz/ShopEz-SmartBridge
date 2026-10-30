@@ -317,6 +317,22 @@
   line-height: 1.7;
 }
 
+.auth-form-description {
+  margin: 0;
+  color: #7a7f88;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.auth-back-button {
+  align-self: center;
+  margin-top: 2px;
+}
+
+.reset-password-shell {
+  min-height: 540px;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -768,4 +784,3 @@
     font-size: 10px;
   }
 }
-

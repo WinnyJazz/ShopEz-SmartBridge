@@ -4,6 +4,7 @@ const path = require("path");
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Favorite = require("../models/Favorite");
+const User = require("../models/User");
 
 // Field toko yang ikut dikirim bersama produk.
 const SELLER_FIELDS = "name profileImage shopImage shopName shopLocation";
@@ -67,10 +68,18 @@ const getProducts = async (req, res) => {
       isActive: { $ne: false },
     };
 
-    if (search) {
+    const searchTerm = typeof search === "string" ? search.trim() : "";
+    if (searchTerm) {
+      const searchRegex = new RegExp(escapeRegex(searchTerm), "i");
+      const matchingSellerIds = await User.find({
+        role: "seller",
+        shopName: searchRegex,
+      }).distinct("_id");
+
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { name: searchRegex },
+        { description: searchRegex },
+        { seller: { $in: matchingSellerIds } },
       ];
     }
 

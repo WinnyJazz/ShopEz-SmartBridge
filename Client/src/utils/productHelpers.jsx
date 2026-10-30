@@ -52,6 +52,7 @@ export function normalizeProduct(p) {
     originalPrice,
     discount,
     stock,
+    shippingEstimateDays: Number(p.shippingEstimateDays) || 3,
     inStock: stock > 0,
     isNew,
     createdAt,
