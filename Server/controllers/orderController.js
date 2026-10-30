@@ -157,7 +157,7 @@ exports.createOrder = async (req, res) => {
         });
       }
 
-      if (String(product.seller) === String(req.user.userId)) {
+      if (String(product.seller?._id || product.seller) === String(req.user.userId)) {
         return res.status(400).json({
           message: `You can't buy your own product: "${product.name}".`,
         });

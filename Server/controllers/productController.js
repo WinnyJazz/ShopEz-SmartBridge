@@ -199,6 +199,8 @@ const getMyProducts = async (req, res) => {
 // GET: detail satu produk.
 const getProductById = async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).json({
         message: "Product not found.",
