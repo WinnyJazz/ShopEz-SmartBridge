@@ -514,6 +514,52 @@ exports.getSellerOrders = async (req, res) => {
   }
 };
 
+// GET /api/orders/seller/analytics
+exports.getSellerAnalytics = async (req, res) => {
+  try {
+    const [soldProducts, highestRatedProduct] = await Promise.all([
+      Order.aggregate([
+        {
+          $match: {
+            seller: new mongoose.Types.ObjectId(req.user.userId),
+            status: "completed",
+          },
+        },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.product",
+            name: { $first: "$items.name" },
+            image: { $first: "$items.image" },
+            quantitySold: { $sum: "$items.quantity" },
+          },
+        },
+        { $sort: { quantitySold: -1, name: 1, _id: 1 } },
+      ]),
+      Product.findOne({
+        seller: req.user.userId,
+        numReviews: { $gt: 0 },
+      })
+        .sort({ rating: -1, numReviews: -1, name: 1 })
+        .select("name image rating numReviews"),
+    ]);
+
+    return res.status(200).json({
+      analytics: {
+        totalProductsSold: soldProducts.reduce(
+          (total, product) => total + product.quantitySold,
+          0
+        ),
+        mostSoldProduct: soldProducts[0] || null,
+        highestRatedProduct,
+      },
+    });
+  } catch (error) {
+    console.error("Get seller analytics error:", error.message);
+    return res.status(500).json({ message: "Failed to load seller analytics." });
+  }
+};
+
 // PUT /api/orders/:id/payment  (seller acc / tolak bukti bayar)
 // body: { decision: "approve" | "reject", note }
 exports.reviewPayment = async (req, res) => {

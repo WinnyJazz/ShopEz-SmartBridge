@@ -8,6 +8,7 @@ const {
   cancelOrder,
   uploadPaymentProof,
   getPaymentProof,
+  getSellerAnalytics,
   getSellerOrders,
   reviewPayment,
   updateOrderStatus,
@@ -22,6 +23,7 @@ router.post("/", authMiddleware, createOrder);
 
 // "/mine" dan "/seller/mine" harus di atas "/:id"
 router.get("/mine", authMiddleware, getMyOrders);
+router.get("/seller/analytics", authMiddleware, sellerMiddleware, getSellerAnalytics);
 router.get("/seller/mine", authMiddleware, sellerMiddleware, getSellerOrders);
 
 router.get("/:id", authMiddleware, getOrderById);
