@@ -8,6 +8,8 @@ const User = require("../models/User");
 
 // Field toko yang ikut dikirim bersama produk.
 const SELLER_FIELDS = "name profileImage shopImage shopName shopLocation";
+const PAYMENT_FIELDS =
+  "shopQris shopBankName shopBankAccount shopBankHolder";
 
 const MAX_IMAGES = 8;
 
@@ -16,6 +18,41 @@ const PRODUCT_CATEGORIES = Product.PRODUCT_CATEGORIES;
 // File hasil upload multer -> path yang disimpan di database.
 const toImagePaths = (files = []) =>
   files.map((file) => `/uploads/${file.filename}`);
+
+async function addPublicPaymentMethods(products) {
+  const productList = Array.isArray(products) ? products : [products];
+  const sellerIds = [
+    ...new Set(
+      productList
+        .map((product) => String(product.seller?._id || product.seller || ""))
+        .filter(Boolean)
+    ),
+  ];
+  const sellers = await User.find({ _id: { $in: sellerIds } }).select(
+    PAYMENT_FIELDS
+  );
+  const sellerMethods = new Map(
+    sellers.map((seller) => [
+      String(seller._id),
+      [
+        ...(seller.shopQris ? ["qris"] : []),
+        ...(seller.shopBankName &&
+        seller.shopBankAccount &&
+        seller.shopBankHolder
+          ? ["bank_transfer"]
+          : []),
+      ],
+    ])
+  );
+
+  return productList.map((product) => {
+    const data =
+      typeof product.toObject === "function" ? product.toObject() : { ...product };
+    const sellerId = String(data.seller?._id || data.seller || "");
+    data.paymentMethods = sellerMethods.get(sellerId) || [];
+    return data;
+  });
+}
 
 // Mendukung category dalam bentuk string maupun array.
 function normalizeCategories(value) {
@@ -152,11 +189,12 @@ const getProducts = async (req, res) => {
     const products = await Product.find(filter)
       .populate("seller", SELLER_FIELDS)
       .sort({ createdAt: -1 });
+    const productsWithPaymentMethods = await addPublicPaymentMethods(products);
 
     return res.status(200).json({
       success: true,
-      count: products.length,
-      products,
+      count: productsWithPaymentMethods.length,
+      products: productsWithPaymentMethods,
     });
   } catch (error) {
     console.error("Get products error:", error.message);
@@ -218,7 +256,9 @@ const getProductById = async (req, res) => {
       });
     }
 
-    return res.status(200).json({ product });
+    const [productWithPaymentMethods] = await addPublicPaymentMethods([product]);
+
+    return res.status(200).json({ product: productWithPaymentMethods });
   } catch (error) {
     console.error("Get product error:", error.message);
 

@@ -20,6 +20,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/chats", require("./routes/chatRoutes"));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/favorites", require("./routes/favoriteRoutes"));
