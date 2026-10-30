@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
 
+const orderItemVariantSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    value: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
 const orderItemSchema = new mongoose.Schema(
   {
     product: {
@@ -14,6 +22,7 @@ const orderItemSchema = new mongoose.Schema(
     },
     name: { type: String, required: true },
     image: { type: String, default: "" },
+    variants: { type: [orderItemVariantSchema], default: [] },
     // Harga satuan setelah diskon, dikunci saat order dibuat
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },

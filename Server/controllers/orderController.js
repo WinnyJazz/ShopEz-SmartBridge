@@ -72,23 +72,40 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: "Your cart is empty." });
     }
 
-    // Validasi item dan gabungkan produk yang duplikat
+    // Validate each line while keeping different variant selections separate.
     const quantities = new Map();
+    const lines = new Map();
 
     for (const item of items) {
       const productId = String(item?.productId || "");
       const quantity = Number(item?.quantity);
+      const variants = item?.variants === undefined ? [] : item.variants;
 
       if (
         !isValidId(productId) ||
         !Number.isInteger(quantity) ||
         quantity < 1 ||
-        quantity > MAX_QUANTITY
+        quantity > MAX_QUANTITY ||
+        !Array.isArray(variants) ||
+        variants.some(
+          (variant) =>
+            typeof variant?.name !== "string" ||
+            typeof variant?.value !== "string" ||
+            !variant.name.trim() ||
+            !variant.value.trim()
+        )
       ) {
         return res.status(400).json({ message: "Invalid cart item." });
       }
 
       quantities.set(productId, (quantities.get(productId) || 0) + quantity);
+      const lineKey = `${productId}:${JSON.stringify(variants)}`;
+      const existingLine = lines.get(lineKey);
+      lines.set(lineKey, {
+        productId,
+        variants,
+        quantity: (existingLine?.quantity || 0) + quantity,
+      });
     }
 
     // Validasi alamat
@@ -147,6 +164,43 @@ exports.createOrder = async (req, res) => {
       }
     }
 
+    const normalizedLines = [];
+    for (const line of lines.values()) {
+      const product = productMap.get(line.productId);
+      const options = product.variantOptions || [];
+      const selected = new Map();
+
+      for (const variant of line.variants) {
+        const name = variant.name.trim();
+        const value = variant.value.trim();
+        if (selected.has(name)) {
+          return res.status(400).json({
+            message: `Choose only one value for each variant of "${product.name}".`,
+          });
+        }
+        selected.set(name, value);
+      }
+
+      if (
+        selected.size !== options.length ||
+        options.some(
+          (option) => !selected.has(option.name) || !option.values.includes(selected.get(option.name))
+        )
+      ) {
+        return res.status(400).json({
+          message: `Choose valid variants for "${product.name}".`,
+        });
+      }
+
+      normalizedLines.push({
+        ...line,
+        variants: options.map((option) => ({
+          name: option.name,
+          value: selected.get(option.name),
+        })),
+      });
+    }
+
     // Pembayaran non-COD: pastikan tiap toko sudah mengisi info pembayaran
     if (paymentMethod !== "cod") {
       const sellerIds = [...new Set(products.map((p) => String(p.seller)))];
@@ -191,8 +245,8 @@ exports.createOrder = async (req, res) => {
     // Kelompokkan item per toko
     const groups = new Map();
 
-    for (const [productId, quantity] of quantities) {
-      const product = productMap.get(productId);
+    for (const line of normalizedLines) {
+      const product = productMap.get(line.productId);
       const sellerId = String(product.seller);
       const cover =
         (Array.isArray(product.images) && product.images[0]) ||
@@ -207,7 +261,8 @@ exports.createOrder = async (req, res) => {
         name: product.name,
         image: cover,
         price: unitPrice(product),
-        quantity,
+        variants: line.variants,
+        quantity: line.quantity,
       });
     }
 

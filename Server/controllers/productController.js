@@ -59,6 +59,61 @@ function validateCategories(value) {
   };
 }
 
+function validateVariantOptions(value) {
+  let options = value;
+
+  if (typeof options === "string") {
+    try {
+      options = JSON.parse(options);
+    } catch {
+      return { valid: false, message: "Invalid variant options." };
+    }
+  }
+
+  if (options === undefined || options === null || options === "") {
+    options = [];
+  }
+
+  if (!Array.isArray(options) || options.length > 5) {
+    return {
+      valid: false,
+      message: "Provide up to 5 variant options.",
+    };
+  }
+
+  const normalized = [];
+  const names = new Set();
+
+  for (const option of options) {
+    const name = typeof option?.name === "string" ? option.name.trim() : "";
+    const values = Array.isArray(option?.values)
+      ? option.values.map((item) => (typeof item === "string" ? item.trim() : ""))
+      : [];
+    const normalizedName = name.toLowerCase();
+
+    if (
+      !name ||
+      name.length > 50 ||
+      names.has(normalizedName) ||
+      values.length === 0 ||
+      values.length > 20 ||
+      values.some((item) => !item || item.length > 50) ||
+      new Set(values.map((item) => item.toLowerCase())).size !== values.length
+    ) {
+      return {
+        valid: false,
+        message:
+          "Each variant needs a unique name and 1–20 unique values (50 characters maximum).",
+      };
+    }
+
+    names.add(normalizedName);
+    normalized.push({ name, values });
+  }
+
+  return { valid: true, options: normalized };
+}
+
 // GET: katalog publik, semua produk aktif dari semua seller.
 const getProducts = async (req, res) => {
   try {
@@ -181,6 +236,8 @@ const createProduct = async (req, res) => {
     const price = Number(req.body.price);
     const stock = Number(req.body.stock);
     const discountPercentage = Number(req.body.discountPercentage || 0);
+    const shippingEstimateDays = Number(req.body.shippingEstimateDays ?? 3);
+    const variantResult = validateVariantOptions(req.body.variantOptions);
 
     if (!name || !description) {
       return res.status(400).json({
@@ -194,6 +251,10 @@ const createProduct = async (req, res) => {
       });
     }
 
+    if (!variantResult.valid) {
+      return res.status(400).json({ message: variantResult.message });
+    }
+
     if (!Number.isFinite(price) || price < 0) {
       return res.status(400).json({
         message: "Price must be a valid non-negative number.",
@@ -203,6 +264,16 @@ const createProduct = async (req, res) => {
     if (!Number.isInteger(stock) || stock < 0) {
       return res.status(400).json({
         message: "Stock must be a non-negative whole number.",
+      });
+    }
+
+    if (
+      !Number.isInteger(shippingEstimateDays) ||
+      shippingEstimateDays < 1 ||
+      shippingEstimateDays > 30
+    ) {
+      return res.status(400).json({
+        message: "Shipping estimate must be between 1 and 30 whole days.",
       });
     }
 
@@ -237,6 +308,8 @@ const createProduct = async (req, res) => {
       price,
       category: categoryResult.categories,
       stock,
+      variantOptions: variantResult.options,
+      shippingEstimateDays,
       discountPercentage,
       images,
       image: images[0],
@@ -286,6 +359,16 @@ const updateProduct = async (req, res) => {
     }
 
     const body = req.body;
+
+    if (body.variantOptions !== undefined) {
+      const variantResult = validateVariantOptions(body.variantOptions);
+
+      if (!variantResult.valid) {
+        return res.status(400).json({ message: variantResult.message });
+      }
+
+      product.variantOptions = variantResult.options;
+    }
 
     if (body.name !== undefined) {
       const name = String(body.name).trim();
@@ -345,6 +428,22 @@ const updateProduct = async (req, res) => {
       }
 
       product.stock = stock;
+    }
+
+    if (body.shippingEstimateDays !== undefined) {
+      const shippingEstimateDays = Number(body.shippingEstimateDays);
+
+      if (
+        !Number.isInteger(shippingEstimateDays) ||
+        shippingEstimateDays < 1 ||
+        shippingEstimateDays > 30
+      ) {
+        return res.status(400).json({
+          message: "Shipping estimate must be between 1 and 30 whole days.",
+        });
+      }
+
+      product.shippingEstimateDays = shippingEstimateDays;
     }
 
     if (body.discountPercentage !== undefined) {

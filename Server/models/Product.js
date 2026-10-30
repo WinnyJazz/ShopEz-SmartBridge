@@ -9,6 +9,17 @@ const PRODUCT_CATEGORIES = [
   "Lifestyle",
 ];
 
+const variantOptionSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 50 },
+    values: {
+      type: [{ type: String, trim: true, maxlength: 50 }],
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     // Seller yang memiliki produk
@@ -94,6 +105,42 @@ const productSchema = new mongoose.Schema(
       validate: {
         validator: Number.isInteger,
         message: "Stock must be a whole number",
+      },
+    },
+
+    variantOptions: {
+      type: [variantOptionSchema],
+      default: [],
+      validate: [
+        {
+          validator: (options) => options.length <= 5,
+          message: "A product can have a maximum of 5 variant options",
+        },
+        {
+          validator: (options) =>
+            options.every(
+              (option) =>
+                option.name &&
+                option.values.length > 0 &&
+                new Set(option.values.map((value) => value.toLowerCase())).size ===
+                  option.values.length
+            ) &&
+            new Set(options.map((option) => option.name.toLowerCase())).size ===
+              options.length,
+          message: "Variant options and values must be non-empty and unique",
+        },
+      ],
+    },
+
+    shippingEstimateDays: {
+      type: Number,
+      required: true,
+      default: 3,
+      min: [1, "Shipping estimate must be at least 1 day"],
+      max: [30, "Shipping estimate cannot exceed 30 days"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Shipping estimate must be a whole number of days",
       },
     },
 
